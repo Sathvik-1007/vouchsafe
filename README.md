@@ -1,11 +1,23 @@
 # Bureau
 
+[![licence: MIT](https://img.shields.io/badge/licence-MIT-1a1c19)](LICENSE)
+[![tests: 117 passing](https://img.shields.io/badge/tests-117%20passing-4c2a85)](tests/)
+[![runtime dependencies: none](https://img.shields.io/badge/runtime%20dependencies-none-1a1c19)](package.json)
+[![live](https://img.shields.io/badge/live-bureau--lettings.vercel.app-4c2a85)](https://bureau-lettings.vercel.app)
+
 **The letting agent gets an answer, not your life.**
 
 Try it at <https://bureau-lettings.vercel.app>. If you would rather not take any
 of this on trust, <https://bureau-lettings.vercel.app/proof.html> reads the
 browser's own tool registry, live, on both origins, and lets you watch a
-permission stop existing.
+permission stop existing. **It registers nothing itself, which is what makes it
+a witness rather than a participant.**
+
+Everything we measured about Chrome's implementation while building this, with
+the steps to reproduce each one, is in
+[docs/CHROME-FINDINGS.md](docs/CHROME-FINDINGS.md). Three of those findings we
+have not seen recorded anywhere else, because reproducing them needs two origins
+trading tools.
 
 Video: VIDEO_URL. The tool contract is in [TOOLS.md](TOOLS.md). MIT licensed,
 117 tests, and no runtime dependencies at all.
@@ -19,7 +31,7 @@ Bureau is that bit. Your facts live on your own origin and never leave your
 browser. A letting agent borrows the *capability to ask*, gets back a word, and
 holds nothing.
 
-## Ask it something
+## The 60-second judge path
 
 Open the live URL in ChatGPT's browser (⌘⇧B, then Settings, Browser,
 Permissions, Enable site tools), or in Chrome 149+ with the

@@ -162,8 +162,9 @@ function renderReference() {
 
   if (granted.length === 0) {
     box.innerHTML = '';
-    empty.textContent =
-      'Nothing is allowed yet, so this agent holds nothing at all. Allow a question below and it appears here.';
+    // The stage above already says this agency holds nothing. Repeating it here
+    // is the same sentence twice on one screen; this one says what to do next.
+    empty.textContent = 'Allow a question below and it will appear here.';
     return;
   }
   empty.textContent = '';
@@ -192,6 +193,27 @@ function renderReference() {
     .join('');
 }
 
+/**
+ * The heading a group of questions sits under.
+ *
+ * The catalogue stores a lowercase machine value, which was being printed
+ * straight onto the page beside headings written as sentences. A reader should
+ * not be able to tell which strings came from a data structure.
+ *
+ * @param {string} category
+ * @returns {string}
+ */
+function categoryHeading(category) {
+  return {
+    affordability: 'Can you afford it',
+    'tenancy history': 'Your renting history',
+    employment: 'Your work',
+    legal: 'The legal check',
+    logistics: 'The practicalities',
+    'raw disclosure': 'The old way, for comparison',
+  }[category] ?? category;
+}
+
 function renderPermissions() {
   const parts = [];
   const seenCategory = [];
@@ -202,7 +224,7 @@ function renderPermissions() {
       parts.push(
         '<h3 style="font-family:var(--serif);font-variation-settings:\'opsz\' 24;' +
           'font-size:var(--t-base);font-weight:600;margin:1.6rem 0 .2rem;color:var(--ink-mid)">' +
-          esc(p.category === 'raw disclosure' ? 'The old way, for comparison' : p.category) +
+          esc(categoryHeading(p.category)) +
           '</h3>'
       );
     }
@@ -244,12 +266,12 @@ function renderDisclosure() {
 
   $('bits-explain').textContent =
     bits === 0
-      ? 'This agent knows nothing about you.'
+      ? 'This agency knows nothing about you.'
       : bits <= BITS_ROUTINE
         ? 'Every one of these is a single yes or no, and it expires the moment you withdraw it. The documents that answer the same questions would have been a copy, kept.'
         : bits < BITS_ALARMING
           ? 'Past the ordinary check. Something here gives away more than a yes or no.'
-          : 'A raw disclosure is live. This agent can identify you directly.';
+          : 'A raw disclosure is live. This agency can identify you directly.';
 }
 
 /**
@@ -260,8 +282,8 @@ function renderDisclosure() {
 function renderStage() {
   const granted = readGrants()[selected] ?? [];
   const bits = disclosedBits(selected);
-  const c = compareDisclosure(granted);
-  const n = granted.length;
+  const comparison = compareDisclosure(granted);
+  const allowed = granted.length;
 
   // The headline states what is true right now. An earlier version asserted
   // "they asked nine questions" while the counters underneath read zero, which
@@ -274,7 +296,7 @@ function renderStage() {
 
   $('stage-sub').textContent =
     n === 0
-      ? 'Nothing is allowed yet, so this agent holds nothing at all. Everything a letting agency normally demands is already here, and there is no code on this page that could send it anywhere.'
+      ? 'Nothing is allowed yet, so this agency holds nothing at all. Everything they would normally demand is already here, and there is no code on this page that could send it anywhere.'
       : 'Everything they would normally have held about you is still here, on your side of the line, and there is no code on this page that could send it anywhere.';
 
   $('stage-bits').textContent = Number.isInteger(bits) ? String(bits) : bits.toFixed(1);
@@ -304,7 +326,7 @@ function renderCounterfactual() {
     return;
   }
 
-  const c = compareDisclosure(granted);
+  const comparison = compareDisclosure(granted);
   if (c.documents.length === 0) {
     box.innerHTML =
       '<p class="note">These are raw disclosures. There is no document they spare you, ' +

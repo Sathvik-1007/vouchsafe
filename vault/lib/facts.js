@@ -200,18 +200,18 @@ export function validateFact(key, value) {
   const expected = SEED_FACTS[key];
 
   if (typeof expected === 'number') {
-    const n = typeof value === 'string' ? Number(value.trim()) : value;
-    if (typeof n !== 'number' || !Number.isFinite(n)) {
+    const parsed = typeof value === 'string' ? Number(value.trim()) : value;
+    if (typeof parsed !== 'number' || !Number.isFinite(parsed)) {
       return { ok: false, error: key + ' must be a finite number' };
     }
-    if (n < 0) return { ok: false, error: key + ' cannot be negative' };
-    if (key === 'householdSize' && n > MAX_HOUSEHOLD_SIZE) {
+    if (parsed < 0) return { ok: false, error: key + ' cannot be negative' };
+    if (key === 'householdSize' && parsed > MAX_HOUSEHOLD_SIZE) {
       return { ok: false, error: 'householdSize cannot exceed ' + MAX_HOUSEHOLD_SIZE };
     }
-    if (key === 'referenceCount' && n > MAX_REFERENCES) {
+    if (key === 'referenceCount' && parsed > MAX_REFERENCES) {
       return { ok: false, error: 'referenceCount cannot exceed ' + MAX_REFERENCES };
     }
-    return { ok: true, value: n };
+    return { ok: true, value: parsed };
   }
 
   if (typeof expected === 'boolean') {

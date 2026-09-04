@@ -455,7 +455,7 @@ export async function registerManagementTools() {
       run: () => {
         const granted = Object.values(readGrants()).flat();
         if (granted.length === 0) return 'Nothing is granted, so nothing has been disclosed.';
-        const c = compareDisclosure(granted);
+        const comparison = compareDisclosure(granted);
         return [
           'Answered by permission: ' + c.predicateBits + ' bit' +
             (c.predicateBits === 1 ? '' : 's') + ', one per question.',
@@ -479,13 +479,13 @@ export async function registerManagementTools() {
       readOnly: true,
       run: (args) => {
         const name = String(args.predicate ?? '');
-        const p = findPredicate(name);
-        if (!p) return 'Error: no such permission "' + name + '"';
+        const predicate = findPredicate(name);
+        if (!predicate) return 'Error: no such permission "' + name + '"';
         const lines = [
           p.title + ' (' + p.name + '), ' + p.disclosureBits + ' bit' + (p.disclosureBits === 1 ? '' : 's'),
           'Reveals: ' + p.reveals,
         ];
-        const c = counterfactualFor(name);
+        const replaced = counterfactualFor(name);
         if (c) {
           lines.push('Replaces: ' + c.document + '.');
           lines.push('Which would also have revealed: ' + c.alsoReveals.join(', ') + '.');

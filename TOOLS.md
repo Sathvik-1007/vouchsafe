@@ -70,22 +70,6 @@ them describe the applicant, because this origin holds nothing about them.
 | `submit_application` | Submit, but only once every required check has been answered yes. | no |
 | `what_this_site_knows` | State exactly what this agency holds about the applicant. | yes |
 
-## The one declarative tool
-
-Everything above is registered with `document.modelContext.registerTool`. The
-vault's file editor is not: it is a plain `<form>` carrying `toolname`, and
-Chrome turns it into a tool on its own, reading the fields and writing the JSON
-Schema without a line of JavaScript.
-
-| Tool | What it does | Waits for a person |
-| --- | --- | --- |
-| `prepare_file_update` | Fill in the applicant's details so they can review and save them | yes |
-
-It carries no `toolautosubmit`, which is the point. Chrome parks the agent's
-call until somebody presses Save, so an assistant can prepare the whole change
-and a person still commits it. The imperative API cannot express that: an
-`execute` runs the moment it is called.
-
 ## Annotations
 
 Every tool carries `readOnlyHint`. Every tool whose answer originates outside the

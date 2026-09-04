@@ -351,14 +351,14 @@ function wireEvents() {
   $('demo-stop').addEventListener('click', () => {
     stopDemo();
     renderDemo(null);
-    notify('Walkthrough stopped.', { tone: 'plain' });
+    notify('Walkthrough closed.', { tone: 'plain' });
   });
 
   $('play-demo').addEventListener('click', () => {
     if (demoRunning()) return;
     runDemo(renderDemo).catch((err) => {
       renderDemo(null);
-      notify('The walkthrough stopped.', { tone: 'bad', detail: errText(err) });
+      notify('The walkthrough could not finish.', { tone: 'bad', detail: errText(err) });
     });
   });
 }

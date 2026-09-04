@@ -82,6 +82,9 @@ async function main() {
     `--user-data-dir=${profile}`,
     '--no-first-run',
     '--no-default-browser-check',
+    // Headless, like every other tool here. A verification run should not put a
+    // window on anyone's screen.
+    '--headless=new',
     '--window-size=1280,900',
     'about:blank',
   ], { stdio: 'ignore', detached: true });

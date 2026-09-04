@@ -86,17 +86,17 @@ export function bitsForBuckets(n) {
  */
 export function requireNumber(args, key, bounds = {}) {
   const raw = args?.[key];
-  const n = typeof raw === 'string' ? Number(raw.trim()) : raw;
-  if (typeof n !== 'number' || !Number.isFinite(n)) {
+  const parsed = typeof raw === 'string' ? Number(raw.trim()) : raw;
+  if (typeof parsed !== 'number' || !Number.isFinite(parsed)) {
     return { ok: false, error: 'argument "' + key + '" must be a number' };
   }
-  if (bounds.min !== undefined && n < bounds.min) {
+  if (bounds.min !== undefined && parsed < bounds.min) {
     return { ok: false, error: '"' + key + '" must be at least ' + bounds.min };
   }
-  if (bounds.max !== undefined && n > bounds.max) {
+  if (bounds.max !== undefined && parsed > bounds.max) {
     return { ok: false, error: '"' + key + '" must be at most ' + bounds.max };
   }
-  return { ok: true, value: n };
+  return { ok: true, value: parsed };
 }
 
 /**
@@ -127,13 +127,13 @@ export function verdict(verdict_, because) {
  */
 export function monthsBetween(startIso, endIso) {
   if (!isIsoDate(startIso) || !isIsoDate(endIso)) return 0;
-  const a = new Date(startIso + 'T00:00:00Z');
-  const b = new Date(endIso + 'T00:00:00Z');
-  if (b < a) return 0;
+  const from = new Date(startIso + 'T00:00:00Z');
+  const to = new Date(endIso + 'T00:00:00Z');
+  if (to < from) return 0;
   let months =
-    (b.getUTCFullYear() - a.getUTCFullYear()) * 12 + (b.getUTCMonth() - a.getUTCMonth());
+    (to.getUTCFullYear() - from.getUTCFullYear()) * 12 + (to.getUTCMonth() - from.getUTCMonth());
   // Not yet past the day-of-month anniversary, so the final month is incomplete.
-  if (b.getUTCDate() < a.getUTCDate()) months -= 1;
+  if (to.getUTCDate() < from.getUTCDate()) months -= 1;
   return Math.max(0, months);
 }
 
@@ -409,7 +409,7 @@ export const PREDICATES = Object.freeze([
       required: ['allows_pets'],
     },
     disclosureBits: BITS_PER_BOOLEAN,
-    reveals: 'One bit: compatible or not. The animal is named only if you grant the raw tool.',
+    reveals: 'One bit: compatible or not. What kind of animal stays here.',
     readOnly: true,
     evaluate(facts, args) {
       const allows = args?.allows_pets;
@@ -428,7 +428,7 @@ export const PREDICATES = Object.freeze([
     description: 'Answer yes or no: is the applicant a non-smoker?',
     inputSchema: { type: 'object', properties: {}, required: [] },
     disclosureBits: BITS_PER_BOOLEAN,
-    reveals: 'One bit.',
+    reveals: 'One bit: whether anyone smokes. Nothing else.',
     readOnly: true,
     evaluate(facts) {
       return verdict(!facts.smoker, 'self-declared');

@@ -81,15 +81,15 @@ export function confirmAction(anchor, { question, detail, confirmLabel }) {
     cancel.textContent = 'Keep it';
     cancel.addEventListener('click', () => finish(false));
 
-    const go = document.createElement('button');
-    go.type = 'button';
-    go.className = 'revoke';
-    go.textContent = confirmLabel;
-    go.addEventListener('click', () => finish(true));
+    const proceed = document.createElement('button');
+    proceed.type = 'button';
+    proceed.className = 'revoke';
+    proceed.textContent = confirmLabel;
+    proceed.addEventListener('click', () => finish(true));
 
     // Cancel first in the DOM, so it is what Tab and Enter reach first. The
     // safe answer should be the easy one.
-    row.append(cancel, go);
+    row.append(cancel, proceed);
     box.appendChild(row);
 
     // Anchored to the control's own offset parent, so it follows the button if

@@ -245,10 +245,10 @@ export function recordProbe(origin, predicate, args, answer, now = Date.now()) {
   const threshold = reader(args);
   if (threshold === null) return;
 
-  const k = key(origin, predicate);
-  const entries = fresh(history.get(k) ?? [], now);
+  const historyKey = key(origin, predicate);
+  const entries = fresh(history.get(historyKey) ?? [], now);
   entries.push({ at: now, threshold, answer });
-  history.set(k, entries);
+  history.set(historyKey, entries);
 }
 
 /**
@@ -263,13 +263,19 @@ export function recordProbe(origin, predicate, args, answer, now = Date.now()) {
  */
 export function activeProbes(now = Date.now()) {
   const out = [];
-  for (const k of history.keys()) {
-    const gap = k.lastIndexOf(' ');
-    const origin = k.slice(0, gap);
-    const predicate = k.slice(gap + 1);
-    const b = bracketFor(origin, predicate, now);
-    if (b.probes > 1 && b.bits > 0) {
-      out.push({ origin, predicate, probes: b.probes, bits: b.bits, bracket: b.bracket });
+  for (const historyKey of history.keys()) {
+    const gap = historyKey.lastIndexOf(' ');
+    const origin = historyKey.slice(0, gap);
+    const predicate = historyKey.slice(gap + 1);
+    const found = bracketFor(origin, predicate, now);
+    if (found.probes > 1 && found.bits > 0) {
+      out.push({
+        origin,
+        predicate,
+        probes: found.probes,
+        bits: found.bits,
+        bracket: found.bracket,
+      });
     }
   }
   return out.sort((a, b) => b.bits - a.bits);
