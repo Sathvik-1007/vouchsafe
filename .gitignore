@@ -3,3 +3,4 @@ node_modules/
 spike/
 *.log
 .vercel
+RULES.md
