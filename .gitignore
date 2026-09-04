@@ -4,3 +4,4 @@ spike/
 *.log
 .vercel
 RULES.md
+.vercel/

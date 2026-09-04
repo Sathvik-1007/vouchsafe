@@ -14,8 +14,8 @@ the agent's hands mid-conversation.
 
 Built for the [OpenAI WebMCP Challenge](https://webmcp.devpost.com/).
 
-- **Live:** LIVE_HOST_URL — open in ChatGPT's browser, or Chrome 149+
-- **Your vault:** LIVE_VAULT_URL
+- **Live:** <https://bureau-lettings.vercel.app> — open in ChatGPT's browser, or Chrome 149+
+- **Your vault:** <https://bureau-vault.vercel.app> (embedded in the page above; this is the standalone console)
 - **Video:** VIDEO_URL
 - **Licence:** MIT
 
