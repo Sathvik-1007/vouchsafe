@@ -119,3 +119,19 @@ test('the two origins carry identical copies of every shared module', () => {
   }
   assert.deepEqual(drifted, [], 'run tools/sync-config.sh; these have drifted: ' + drifted.join(', '));
 });
+
+test('the hidden attribute is honoured in both stylesheets', () => {
+  // `.announcer` is `display: grid`, which beats the user agent's `display:
+  // none` for `[hidden]`. Without an author rule saying otherwise, every page
+  // load opened with an empty bordered banner and a close button over the
+  // masthead. Six elements in the markup rely on the attribute, so this is
+  // asserted on the stylesheet rather than on any one of them.
+  for (const sheet of ['vault/ui/base.css', 'host/ui/base.css']) {
+    const css = readFileSync(join(ROOT, sheet), 'utf8');
+    assert.match(
+      css,
+      /\[hidden\]\s*\{[^}]*display:\s*none\s*!important/,
+      sheet + ' does not force hidden elements to stay hidden'
+    );
+  }
+});

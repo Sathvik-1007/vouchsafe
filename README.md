@@ -19,8 +19,9 @@ the steps to reproduce each one, is in
 have not seen recorded anywhere else, because reproducing them needs two origins
 trading tools.
 
-Video: VIDEO_URL. The tool contract is in [TOOLS.md](TOOLS.md). MIT licensed,
-117 tests, and no runtime dependencies at all.
+<!-- video: replace this comment with the line `Video: <url>.` once recorded -->
+The tool contract is in [TOOLS.md](TOOLS.md). MIT licensed, 117 tests, and no
+runtime dependencies at all.
 
 To rent a flat in Britain you upload your payslips, your bank statements and
 your passport to six letting agents, who keep them forever. None of them wanted

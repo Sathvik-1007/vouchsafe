@@ -20,7 +20,7 @@ import { spawn } from 'node:child_process';
 import { createServer as createHttpServer } from 'node:http';
 import { createServer } from 'node:net';
 import { readFile, mkdtemp } from 'node:fs/promises';
-import { existsSync } from 'node:fs';
+import { existsSync, rmSync } from 'node:fs';
 import { join, extname, normalize } from 'node:path';
 import { tmpdir } from 'node:os';
 import { fileURLToPath } from 'node:url';
@@ -161,6 +161,7 @@ class Browser {
     }
     const b = new Browser();
     b.proc = proc;
+    b.profile = profile;
     await b.attach();
     return b;
   }
@@ -283,6 +284,13 @@ class Browser {
       process.kill(-this.proc.pid, 'SIGKILL');
     } catch {
       try { this.proc?.kill('SIGKILL'); } catch { /* already gone */ }
+    }
+    // Take the profile with it. A Chrome profile is about 100MB and this ran
+    // against a 3.8G tmpfs, so fifty-odd runs filled /tmp and the next build
+    // failed with ENOSPC a long way from anything to do with these tests.
+    // Synchronous because the process usually exits on the next line.
+    if (this.profile) {
+      try { rmSync(this.profile, { recursive: true, force: true }); } catch { /* fine */ }
     }
   }
 }

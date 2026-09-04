@@ -74,6 +74,14 @@
   --gap: 1.5rem;
   --sheet-pad: clamp(1.25rem, 3vw, 2.75rem);
 }
+/* The `hidden` attribute must actually hide.
+   The user agent hides it with `display: none`, which any author rule setting a
+   display wins against. `.announcer` is `display: grid`, so a banner marked
+   hidden painted anyway: every page load opened with an empty bordered box and
+   a close button sitting over the masthead. This is stated once, for every
+   element that carries the attribute, rather than remembered per component. */
+[hidden] { display: none !important; }
+
 
 * { box-sizing: border-box; }
 
