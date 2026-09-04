@@ -1,0 +1,57 @@
+[
+  {
+    "name": "Lists the properties on offer",
+    "messages": [
+      { "role": "user", "type": "message", "content": "What have you got available?" }
+    ],
+    "expectedCall": [{ "functionName": "list_listings", "arguments": {} }]
+  },
+  {
+    "name": "Reads one property in full",
+    "messages": [
+      { "role": "user", "type": "message", "content": "Tell me about the Wilbraham Road flat." }
+    ],
+    "expectedCall": [{ "functionName": "get_listing", "arguments": { "listing_id": "ml-114" } }]
+  },
+  {
+    "name": "Names what it still needs permission to ask",
+    "messages": [
+      { "role": "user", "type": "message", "content": "What do you still need from me for ml-114?" }
+    ],
+    "expectedCall": [
+      { "functionName": "missing_permissions", "arguments": { "listing_id": "ml-114" } }
+    ]
+  },
+  {
+    "name": "Runs the checks for a property",
+    "messages": [
+      { "role": "user", "type": "message", "content": "Check whether I qualify for ml-114." }
+    ],
+    "expectedCall": [
+      { "functionName": "check_eligibility", "arguments": { "listing_id": "ml-114" } }
+    ]
+  },
+  {
+    "name": "States what it holds about the applicant",
+    "messages": [
+      { "role": "user", "type": "message", "content": "What do you actually know about me?" }
+    ],
+    "expectedCall": [{ "functionName": "what_this_site_knows", "arguments": {} }]
+  },
+  {
+    "name": "Refuses to submit before the checks have run",
+    "messages": [
+      { "role": "user", "type": "message", "content": "Submit my application for ml-114." }
+    ],
+    "expectedCall": [
+      { "functionName": "submit_application", "arguments": { "listing_id": "ml-114" } }
+    ]
+  },
+  {
+    "name": "Rejects a property id that does not exist",
+    "messages": [
+      { "role": "user", "type": "message", "content": "Tell me about listing zz-999." }
+    ],
+    "expectedCall": [{ "functionName": "get_listing", "arguments": { "listing_id": "zz-999" } }]
+  }
+]

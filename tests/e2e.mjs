@@ -608,6 +608,63 @@ async function main() {
     );
   });
 
+  // ---- the eval contract ---------------------------------------------------
+  console.log('\nthe eval contract (evals.json)');
+
+  await check('every expected call in evals.json is executable as written', async () => {
+    // `evals.json` is written in the format Chrome's own `webmcp-evals` harness
+    // consumes, so the same file drives both. That harness resolves a browser
+    // through a hardcoded system path under /opt and cannot be pointed at the
+    // Chrome we have, so the contract is asserted here as well: every
+    // expectedCall must name a tool that exists and accept the arguments given.
+    const suite = JSON.parse(await readFile(new URL('../evals.json', import.meta.url), 'utf8'));
+    ok(suite.length > 0, 'evals.json is empty');
+
+    const failures = [];
+    for (const testCase of suite) {
+      for (const call of testCase.expectedCall) {
+        const outcome = await browser.evalIn(HOST_ORIGIN, `(async () => {
+          const tools = await document.modelContext.getTools();
+          const tool = tools.find(t => t.name === ${JSON.stringify(call.functionName)});
+          if (!tool) return { missing: true };
+          try {
+            const r = await document.modelContext.executeTool(tool, ${JSON.stringify(JSON.stringify(call.arguments))});
+            return { result: String(r ?? '') };
+          } catch (e) {
+            return { threw: String(e && e.message || e) };
+          }
+        })()`);
+
+        if (outcome.missing) {
+          failures.push(testCase.name + ': no tool named ' + call.functionName);
+        } else if (outcome.threw) {
+          // A tool may legitimately refuse; it must never throw, because Chrome
+          // replaces a thrown Error with a bare UnknownError and the agent is
+          // left with nothing to act on.
+          failures.push(testCase.name + ': ' + call.functionName + ' threw ' + outcome.threw);
+        }
+      }
+    }
+    eq(failures.length, 0, 'eval contract broken:\n        ' + failures.join('\n        '));
+  });
+
+  await check('a tool that cannot do what was asked says so, and does not throw', async () => {
+    // Two cases from the suite that must fail gracefully: an id that does not
+    // exist, and a submission before any check has run.
+    const bad = await browser.evalIn(HOST_ORIGIN, `(async () => {
+      const tools = await document.modelContext.getTools();
+      const get = tools.find(t => t.name === 'get_listing');
+      const submit = tools.find(t => t.name === 'submit_application');
+      return {
+        unknownId: String(await document.modelContext.executeTool(get, '{"listing_id":"zz-999"}')),
+        early: String(await document.modelContext.executeTool(submit, '{"listing_id":"ml-330"}')),
+      };
+    })()`);
+    ok(bad.unknownId.startsWith('Error:'), 'an unknown listing id was not reported: ' + bad.unknownId);
+    ok(/no listing/i.test(bad.unknownId), 'the error does not say what was wrong: ' + bad.unknownId);
+    ok(/Error|Cannot submit/i.test(bad.early), 'submitting before checking was allowed: ' + bad.early);
+  });
+
   // ---- quality floor -------------------------------------------------------
   console.log('\nquality floor');
 
