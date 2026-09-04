@@ -31,8 +31,26 @@ const QUICK_MS = 1700;
  * @property {string} say      caption shown while the step runs
  * @property {string} [detail] smaller line under the caption
  * @property {number} [wait]   override the beat
+ * @property {string} [look]   selector for what this step is about; the page moves to it
  * @property {() => Promise<string | void>} [act] the thing actually done
  */
+
+/**
+ * Bring the thing being talked about into view.
+ *
+ * A walkthrough that narrates something off-screen is worse than no walkthrough,
+ * because the reader looks for what is being described and does not find it.
+ * Honours reduced motion by jumping rather than gliding.
+ *
+ * @param {string} selector
+ * @returns {void}
+ */
+function look(selector) {
+  const el = document.querySelector(selector);
+  if (!el) return;
+  const reduced = matchMedia('(prefers-reduced-motion: reduce)').matches;
+  el.scrollIntoView({ behavior: reduced ? 'auto' : 'smooth', block: 'center' });
+}
 
 /** True while a run is in progress, so the button cannot start two. */
 let running = false;
@@ -81,40 +99,48 @@ function steps() {
   return [
     {
       say: 'Renting normally means uploading your payslips, your bank statements and your passport.',
+      look: '#demo-stage',
       detail: 'To six agencies. Six copies of your life, kept indefinitely.',
       wait: QUICK_MS,
     },
     {
       say: 'None of them wanted your salary. They wanted one answer.',
+      look: '#demo-stage',
       detail: 'Does your income cover three times the rent. Yes or no.',
       wait: QUICK_MS,
     },
     {
       say: 'Right now this agency knows nothing about you.',
+      look: '#graph',
       detail: 'Watch the diagram.',
       act: async () => askVault('revoke-all'),
     },
     {
       say: 'You allow nine questions, in your own file, on your own website.',
+      look: '#graph',
       detail: 'Each is a question they may ask. Not a document they may keep.',
       act: async () => askVault('grant-typical'),
     },
     {
       say: 'Nine questions just became answerable across the boundary between two websites.',
+      look: '#graph',
       detail: 'Your file offered them. This site asked for them. No server in between.',
     },
     {
       say: 'Now the agency runs its checks.',
+      look: '#assessment',
       detail: 'Nine questions. Nine one-word answers.',
       act: async () => callOwnTool('check_eligibility', { listing_id: 'ml-114' }),
       wait: 3200,
     },
     {
       say: 'You qualify. And this site still holds nothing about you.',
+      look: '#assessment',
       act: async () => callOwnTool('what_this_site_knows', {}),
     },
     {
       say: 'Now suppose the agency gets greedy and starts guessing your salary.',
+      look: '#demo-stage',
       detail: 'Every single answer is legitimate. The run of them is not.',
       act: async () => {
         const handle = federatedHandles().find((t) => String(t.name) === 'income_meets_multiple');
@@ -134,22 +160,26 @@ function steps() {
     },
     {
       say: 'Your file noticed, and stopped answering.',
+      look: '#vault-frame',
       detail: 'Five numbers allowed, the sixth refused, and you were told who was asking.',
       wait: 3000,
     },
     {
       say: 'Change your mind, and the question stops being answerable.',
+      look: '#graph',
       detail: 'Nothing is asked to cooperate. It simply stops existing on their side.',
       act: async () => askVault('revoke', 'income_meets_multiple'),
       wait: 3000,
     },
     {
       say: 'Gone, mid-conversation. That check can no longer run.',
+      look: '#assessment',
       act: async () => callOwnTool('check_eligibility', { listing_id: 'ml-114' }),
       wait: 3400,
     },
     {
       say: 'The agency gets an answer, not your life.',
+      look: '#graph',
       detail: 'Your file. Their question. One word back.',
       wait: 4000,
     },
@@ -171,6 +201,7 @@ export async function runDemo(onUpdate) {
   try {
     for (let i = 0; i < script.length; i += 1) {
       const step = script[i];
+      if (step.look) look(step.look);
       onUpdate({
         caption: step.say,
         detail: step.detail ?? '',
