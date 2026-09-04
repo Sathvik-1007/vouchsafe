@@ -289,19 +289,19 @@ function renderStage() {
   // "they asked nine questions" while the counters underneath read zero, which
   // is a claim the interface itself contradicts.
   $('stage-claim').innerHTML =
-    n === 0
+    allowed === 0
       ? 'They will ask. Your file answers in <em>one word</em>.'
-      : 'They asked ' + spell(n) + ' question' + (n === 1 ? '' : 's') +
-        '. They received <em>' + spell(n) + ' word' + (n === 1 ? '' : 's') + '</em>.';
+      : 'They asked ' + spell(allowed) + ' question' + (allowed === 1 ? '' : 's') +
+        '. They received <em>' + spell(allowed) + ' word' + (allowed === 1 ? '' : 's') + '</em>.';
 
   $('stage-sub').textContent =
-    n === 0
+    allowed === 0
       ? 'Nothing is allowed yet, so this agency holds nothing at all. Everything they would normally demand is already here, and there is no code on this page that could send it anywhere.'
       : 'Everything they would normally have held about you is still here, on your side of the line, and there is no code on this page that could send it anywhere.';
 
   $('stage-bits').textContent = Number.isInteger(bits) ? String(bits) : bits.toFixed(1);
-  $('stage-avoided').textContent = String(c.extraFacts);
-  $('stage-ratio').textContent = c.ratio > 0 ? c.ratio + '\u00d7' : '\u2014';
+  $('stage-avoided').textContent = String(comparison.extraFacts);
+  $('stage-ratio').textContent = comparison.ratio > 0 ? comparison.ratio + '\u00d7' : '\u2014';
 }
 
 /**
@@ -327,7 +327,7 @@ function renderCounterfactual() {
   }
 
   const comparison = compareDisclosure(granted);
-  if (c.documents.length === 0) {
+  if (comparison.documents.length === 0) {
     box.innerHTML =
       '<p class="note">These are raw disclosures. There is no document they spare you, ' +
       'because they hand over the contents directly.</p>';
@@ -337,11 +337,11 @@ function renderCounterfactual() {
   box.innerHTML =
     '<h2 style="font-family:var(--serif);font-size:var(--t-md);font-weight:600;margin:0 0 .35rem">' +
     'Still yours</h2>' +
-    '<p class="note" style="margin:0 0 .9rem">' + c.extraFacts +
-    ' things about you that nobody asked for, in ' + c.documents.length +
+    '<p class="note" style="margin:0 0 .9rem">' + comparison.extraFacts +
+    ' things about you that nobody asked for, in ' + comparison.documents.length +
     ' documents you did not send.</p>' +
     '<ul class="plain">' +
-    c.documents
+    comparison.documents
       .map(
         (d) =>
           '<li style="padding:.4rem 0;border-bottom:1px solid var(--rule-soft);font-size:var(--t-sm)">' +
@@ -349,7 +349,7 @@ function renderCounterfactual() {
       )
       .join('') +
     '</ul>' +
-    '<p class="note" style="margin-top:.9rem">Roughly ' + c.ratio +
+    '<p class="note" style="margin-top:.9rem">Roughly ' + comparison.ratio +
     ' times less given away than the usual way.</p>';
 }
 

@@ -457,11 +457,11 @@ export async function registerManagementTools() {
         if (granted.length === 0) return 'Nothing is granted, so nothing has been disclosed.';
         const comparison = compareDisclosure(granted);
         return [
-          'Answered by permission: ' + c.predicateBits + ' bit' +
-            (c.predicateBits === 1 ? '' : 's') + ', one per question.',
-          'Avoided by not uploading: ' + c.documents.join('; ') + '.',
-          'That is ' + c.extraFacts + ' things about the applicant that nobody asked for and nobody received: roughly ' +
-            c.documentBits + ' bits, about ' + c.ratio + ' times what the permissions gave away.',
+          'Answered by permission: ' + comparison.predicateBits + ' bit' +
+            (comparison.predicateBits === 1 ? '' : 's') + ', one per question.',
+          'Avoided by not uploading: ' + comparison.documents.join('; ') + '.',
+          'That is ' + comparison.extraFacts + ' things about the applicant that nobody asked for and nobody received: roughly ' +
+            comparison.documentBits + ' bits, about ' + comparison.ratio + ' times what the permissions gave away.',
         ].join('\n');
       },
     },
@@ -482,13 +482,14 @@ export async function registerManagementTools() {
         const predicate = findPredicate(name);
         if (!predicate) return 'Error: no such permission "' + name + '"';
         const lines = [
-          p.title + ' (' + p.name + '), ' + p.disclosureBits + ' bit' + (p.disclosureBits === 1 ? '' : 's'),
-          'Reveals: ' + p.reveals,
+          predicate.title + ' (' + predicate.name + '), ' + predicate.disclosureBits +
+            ' bit' + (predicate.disclosureBits === 1 ? '' : 's'),
+          'Reveals: ' + predicate.reveals,
         ];
         const replaced = counterfactualFor(name);
-        if (c) {
-          lines.push('Replaces: ' + c.document + '.');
-          lines.push('Which would also have revealed: ' + c.alsoReveals.join(', ') + '.');
+        if (replaced) {
+          lines.push('Replaces: ' + replaced.document + '.');
+          lines.push('Which would also have revealed: ' + replaced.alsoReveals.join(', ') + '.');
         }
         return lines.join('\n');
       },

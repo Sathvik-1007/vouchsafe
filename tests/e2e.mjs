@@ -442,6 +442,9 @@ async function main() {
   const textIn = (origin, sel) => browser.evalIn(origin,
     `(()=>{const e=document.querySelector(${JSON.stringify(sel)}); return e?e.textContent.replace(/\\s+/g,' ').trim():'MISSING';})()`);
 
+  const countIn = (origin, sel) => browser.evalIn(origin,
+    `document.querySelectorAll(${JSON.stringify(sel)}).length`);
+
   // ---- the vault, standalone ---------------------------------------------
   console.log('vault, on its own');
   await browser.goto(`${VAULT_ORIGIN}/?host=${encodeURIComponent(HOST_ORIGIN)}`, 3500);
@@ -469,7 +472,11 @@ async function main() {
 
   await check('nothing is granted on a clean load', async () => {
     eq(await textIn(VAULT_ORIGIN, '#bits-total'), '0', 'bits');
-    ok((await textIn(VAULT_ORIGIN, '#reference-empty')).includes('Nothing is allowed'), 'empty state copy');
+    // Asserted as state, not as a sentence. An earlier version pinned the exact
+    // words, so rewording the copy to stop saying the same thing twice on one
+    // screen failed a test that had no opinion about behaviour.
+    eq(await countIn(VAULT_ORIGIN, '#reference .reference-row'), 0, 'rows shown');
+    ok((await textIn(VAULT_ORIGIN, '#reference-empty')).trim().length > 0, 'empty state says something');
   });
 
   await check('the headline states what is true, not a fixed claim', async () => {
