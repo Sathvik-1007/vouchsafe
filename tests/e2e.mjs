@@ -213,6 +213,12 @@ function ok(value, what) {
   if (!value) throw new Error(what);
 }
 
+function notEq(actual, unexpected, what) {
+  if (actual === unexpected) {
+    throw new Error(`${what}: expected something other than ${JSON.stringify(unexpected)}`);
+  }
+}
+
 /* -------------------------------------------------------------------------- */
 /* the suite                                                                  */
 /* -------------------------------------------------------------------------- */
@@ -234,6 +240,14 @@ async function main() {
 
   const clickVault = (sel) => browser.evalIn(VAULT_ORIGIN,
     `(()=>{const e=document.querySelector(${JSON.stringify(sel)}); if(!e) return 'MISSING'; e.click(); return 'ok';})()`);
+
+  /** Press a destructive control twice, which is what its guard requires. */
+  const clickVaultTwice = async (sel) => {
+    const first = await clickVault(sel);
+    if (first !== 'ok') return first;
+    await sleep(250);
+    return clickVault(sel);
+  };
 
   const textIn = (origin, sel) => browser.evalIn(origin,
     `(()=>{const e=document.querySelector(${JSON.stringify(sel)}); return e?e.textContent.replace(/\\s+/g,' ').trim():'MISSING';})()`);
@@ -351,7 +365,7 @@ async function main() {
   });
 
   await check('"Restore the sample" puts the file back', async () => {
-    eq(await clickVault('#reset-facts'), 'ok', 'button');
+    eq(await clickVaultTwice('#reset-facts'), 'ok', 'button');
     await sleep(500);
     const value = await browser.evalIn(VAULT_ORIGIN, `document.querySelector('[data-fact="annualIncomeGbp"]').value`);
     eq(value, '41400', 'income restored');
@@ -360,14 +374,40 @@ async function main() {
   await check('the ledger records what happened, and clears', async () => {
     const before = await browser.evalIn(VAULT_ORIGIN, `document.querySelectorAll('#ledger li').length`);
     ok(before > 0, 'ledger is empty after all that activity');
-    eq(await clickVault('#clear-ledger'), 'ok', 'button');
+    eq(await clickVaultTwice('#clear-ledger'), 'ok', 'button');
     await sleep(400);
     const after = await textIn(VAULT_ORIGIN, '#ledger');
     ok(after.includes('Nothing has been asked'), 'ledger did not clear, shows: ' + after);
   });
 
+  await check('a destructive control will not fire on a single press', async () => {
+    // `window.confirm` was the obvious guard and the wrong one: Chrome
+    // suppresses dialogs from a cross-origin iframe, which is where this panel
+    // spends most of its life, so the guard would have been missing exactly
+    // where the button is easiest to hit by accident.
+    eq(await clickVault('#grant-typical'), 'ok', 'set something up to destroy');
+    await sleep(900);
+    const before = (await toolsIn(VAULT_ORIGIN)).length;
+
+    eq(await clickVault('#revoke-all'), 'ok', 'first press');
+    await sleep(600);
+    eq((await toolsIn(VAULT_ORIGIN)).length, before, 'one press destroyed the grants');
+    ok(
+      /Press again/i.test(await textIn(VAULT_ORIGIN, '#revoke-all')),
+      'the button did not ask for confirmation'
+    );
+
+    // And it disarms itself rather than staying loaded indefinitely.
+    await sleep(5400);
+    ok(
+      !/Press again/i.test(await textIn(VAULT_ORIGIN, '#revoke-all')),
+      'the button stayed armed after the window closed'
+    );
+    eq((await toolsIn(VAULT_ORIGIN)).length, before, 'grants changed while merely waiting');
+  });
+
   await check('"Withdraw everything" leaves no predicate registered', async () => {
-    eq(await clickVault('#revoke-all'), 'ok', 'button');
+    eq(await clickVaultTwice('#revoke-all'), 'ok', 'button');
     await sleep(900);
     const tools = await toolsIn(VAULT_ORIGIN);
     ok(tools.every((t) => t.startsWith('vault_')), 'predicates survived a full withdrawal: ' + tools.join(','));
@@ -447,11 +487,24 @@ async function main() {
     ok((await textIn(HOST_ORIGIN, '#assessment')).includes('You qualify'), 'verdict copy');
   });
 
-  await check('choosing a different property clears the previous verdict', async () => {
-    await browser.evalIn(HOST_ORIGIN, `document.querySelector('#listings button[data-listing="ml-330"]').click()`);
-    await sleep(700);
-    const stamps = await browser.evalIn(HOST_ORIGIN, `document.querySelectorAll('#assessment .stamp').length`);
-    eq(stamps, 0, 'stale verdict left on screen for a different property');
+  await check('choosing a different property re-checks against that property', async () => {
+    // ml-330 asks for a credit band that ml-114 does not, so a stale verdict
+    // would be visible as the wrong number of rows rather than merely as the
+    // wrong words.
+    const before = await browser.evalIn(HOST_ORIGIN,
+      `document.querySelectorAll('#assessment .stamp').length`);
+    await browser.evalIn(HOST_ORIGIN,
+      `document.querySelector('#listings button[data-listing="ml-330"]').click()`);
+    await sleep(3000);
+
+    const after = await browser.evalIn(HOST_ORIGIN,
+      `document.querySelectorAll('#assessment .stamp').length`);
+    ok(after > 0, 'choosing a property left no verdict at all');
+    notEq(after, before, 'the verdict did not change with the property');
+    ok(
+      (await textIn(HOST_ORIGIN, '#assessment')).toLowerCase().includes('credit'),
+      'the verdict does not include the requirement unique to this property'
+    );
   });
 
   await check('a threshold binary search is refused', async () => {
@@ -492,7 +545,7 @@ async function main() {
   });
 
   await check('withdrawing everything empties the graph', async () => {
-    eq(await clickVault('#revoke-all'), 'ok', 'button');
+    eq(await clickVaultTwice('#revoke-all'), 'ok', 'button');
     await sleep(1800);
     const own = await toolsIn(HOST_ORIGIN);
     ok(!own.some((t) => t.startsWith('applicant_')), 'proxies survived: ' + own.join(','));
@@ -563,7 +616,7 @@ async function main() {
     // had not armed the vault saw "You allow nine questions" over an empty
     // diagram, then "Nine questions. Nine one-word answers." over nine
     // NOT GRANTED lines.
-    await clickVault('#revoke-all');
+    await clickVaultTwice('#revoke-all');
     await sleep(1200);
     await browser.evalIn(VAULT_ORIGIN, `(() => {
       const t = document.getElementById('demo-toggle');

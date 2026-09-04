@@ -37,24 +37,89 @@ export const MAX_REFERENCES = 32;
  * exist so a judge opening the live URL sees a populated vault immediately
  * rather than an empty form, and every one of them is editable in the UI.
  */
-export const SEED_FACTS = Object.freeze({
-  legalName: 'Ama Boateng',
-  annualIncomeGbp: 41400,
-  employerName: 'Northgate Radiology',
-  employmentStartIso: '2023-02-01',
-  employmentType: 'permanent',
-  savingsGbp: 6800,
-  creditBand: 'good',
-  evictionCount: 0,
-  ccjCount: 0,
-  referenceCount: 3,
-  householdSize: 2,
-  hasPets: true,
-  petDescription: 'one neutered cat, indoor',
-  smoker: false,
-  rightToRentValidUntilIso: '2031-06-30',
-  earliestMoveInIso: '2026-10-01',
-});
+export const APPLICANTS = Object.freeze([
+  {
+    id: 'ama',
+    label: 'Ama, staff nurse',
+    summary: 'Permanent contract, three years in post, comfortable on most of the market.',
+    facts: {
+      legalName: 'Ama Boateng',
+      annualIncomeGbp: 41400,
+      employerName: 'Northgate Radiology',
+      employmentStartIso: '2023-02-01',
+      employmentType: 'permanent',
+      savingsGbp: 6800,
+      creditBand: 'good',
+      evictionCount: 0,
+      ccjCount: 0,
+      referenceCount: 3,
+      householdSize: 2,
+      hasPets: true,
+      petDescription: 'one neutered cat, indoor',
+      smoker: false,
+      rightToRentValidUntilIso: '2031-06-30',
+      earliestMoveInIso: '2026-10-01',
+    },
+  },
+  {
+    id: 'dele',
+    label: 'Dele, first tenancy',
+    summary: 'Two years in a first job, no rental history, priced out of the larger places.',
+    facts: {
+      legalName: 'Dele Okafor',
+      annualIncomeGbp: 26800,
+      employerName: 'Riverside Logistics',
+      employmentStartIso: '2024-09-16',
+      employmentType: 'permanent',
+      savingsGbp: 2100,
+      creditBand: 'fair',
+      evictionCount: 0,
+      ccjCount: 0,
+      referenceCount: 1,
+      householdSize: 1,
+      hasPets: false,
+      petDescription: '',
+      smoker: false,
+      rightToRentValidUntilIso: '2029-11-30',
+      earliestMoveInIso: '2026-09-20',
+    },
+  },
+  {
+    id: 'priya',
+    label: 'Priya, self-employed',
+    summary: 'Earns well, seven months self-employed, which the stricter landlords still treat as no history.',
+    facts: {
+      legalName: 'Priya Raman',
+      annualIncomeGbp: 58000,
+      employerName: 'Self-employed, Raman Design',
+      employmentStartIso: '2026-02-02',
+      employmentType: 'self-employed',
+      savingsGbp: 14500,
+      creditBand: 'excellent',
+      evictionCount: 0,
+      ccjCount: 0,
+      referenceCount: 2,
+      householdSize: 3,
+      hasPets: true,
+      petDescription: 'two greyhounds',
+      smoker: false,
+      rightToRentValidUntilIso: '2033-01-31',
+      earliestMoveInIso: '2026-10-20',
+    },
+  },
+]);
+
+/**
+ * The applicant the vault starts on.
+ *
+ * Three of them, not one, because a product that only ever shows a pass never
+ * shows what it is for. Switching to Dele produces a refusal on rent, and to
+ * Priya an incomplete on employment history, without anyone having to hand-edit
+ * a field to get there.
+ *
+ * All invented. No real person's details appear in this repository.
+ */
+export const SEED_FACTS = Object.freeze(APPLICANTS[0].facts);
 
 /**
  * Credit bands in ascending order of strength.
@@ -185,6 +250,36 @@ export function resetFacts() {
   } catch (err) {
     return { ok: false, error: errText(err) };
   }
+}
+
+/**
+ * Replace the whole record with one of the sample applicants.
+ *
+ * @param {string} id one of the ids in `APPLICANTS`
+ * @returns {{ok: true} | {ok: false, error: string}}
+ */
+export function loadApplicant(id) {
+  const applicant = APPLICANTS.find((a) => a.id === id);
+  if (!applicant) return { ok: false, error: 'no sample applicant called "' + id + '"' };
+  try {
+    localStorage.setItem(FACTS_KEY, JSON.stringify(applicant.facts));
+    return { ok: true };
+  } catch (err) {
+    return { ok: false, error: 'could not switch applicant: ' + errText(err) };
+  }
+}
+
+/**
+ * Which sample applicant the current record matches, if any.
+ *
+ * Compared on the name rather than deep-equality, because the point is to show
+ * which preset is loaded, and an edited preset is still that preset.
+ *
+ * @returns {string | null}
+ */
+export function currentApplicantId() {
+  const name = readFacts().legalName;
+  return APPLICANTS.find((a) => a.facts.legalName === name)?.id ?? null;
 }
 
 /**

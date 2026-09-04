@@ -62,17 +62,17 @@ export function depositFor(monthlyRentGbp) {
  * @returns {Requirement[]}
  */
 export function requirementsFor(listing) {
-  return [
+  const required = [
     {
       predicate: 'income_meets_multiple',
-      args: { monthly_rent_gbp: listing.monthlyRentGbp, multiple: 3 },
-      label: 'Annual income of at least 3x the annual rent',
+      args: { monthly_rent_gbp: listing.monthlyRentGbp, multiple: listing.rentMultiple ?? 3 },
+      label: 'Income of at least ' + (listing.rentMultiple ?? 3) + 'x the annual rent',
       mandatory: true,
     },
     {
       predicate: 'deposit_available',
       args: { amount_gbp: depositFor(listing.monthlyRentGbp) },
-      label: 'Deposit of £' + depositFor(listing.monthlyRentGbp) + ' available',
+      label: 'A deposit of ' + gbpish(depositFor(listing.monthlyRentGbp)) + ' available',
       mandatory: true,
     },
     {
@@ -89,39 +89,93 @@ export function requirementsFor(listing) {
     },
     {
       predicate: 'references_at_least',
-      args: { count: 2 },
-      label: 'At least two contactable references',
+      args: { count: listing.minReferences ?? 2 },
+      label:
+        (listing.minReferences ?? 2) === 1
+          ? 'One contactable reference'
+          : (listing.minReferences ?? 2) + ' contactable references',
       mandatory: true,
     },
     {
       predicate: 'employment_months_min',
-      args: { months: 6 },
-      label: 'Six months of continuous employment',
-      mandatory: false,
+      args: { months: listing.minEmploymentMonths ?? 6 },
+      label: (listing.minEmploymentMonths ?? 6) + ' months of continuous employment',
+      mandatory: true,
     },
+    // A landlord who advertises a date, an occupancy limit or a pet policy means
+    // it. Treating these as advisory let a no-pets flat accept a cat owner and
+    // reported it as a pass, which is not how any letting works.
     {
       predicate: 'can_move_in_by',
       args: { date: listing.availableFromIso },
       label: 'Able to move in by ' + listing.availableFromIso,
-      mandatory: false,
+      mandatory: true,
     },
     {
       predicate: 'household_size_at_most',
       args: { max_occupants: listing.maxOccupants },
-      label: 'Household of at most ' + listing.maxOccupants,
-      mandatory: false,
+      label: 'A household of at most ' + listing.maxOccupants,
+      mandatory: true,
     },
     {
       predicate: 'pets_compatible',
       args: { allows_pets: listing.allowsPets },
-      label: listing.allowsPets ? 'Pets welcome' : 'Pet-free property',
-      mandatory: false,
+      label: listing.allowsPets ? 'Pets welcome here' : 'No pets in this property',
+      mandatory: true,
     },
   ];
+
+  // Some landlords ask for more. Kept per-listing rather than global, so the
+  // vault's catalogue is exercised by the properties rather than decorating it.
+  if (listing.minCreditBand) {
+    required.push({
+      predicate: 'credit_band_at_least',
+      args: { band: listing.minCreditBand },
+      label: 'Credit standing of at least ' + listing.minCreditBand.replace('_', ' '),
+      mandatory: true,
+    });
+  }
+  if (listing.nonSmokingOnly) {
+    required.push({
+      predicate: 'is_non_smoker',
+      args: {},
+      label: 'A non-smoking household',
+      mandatory: true,
+    });
+  }
+
+  return required;
+}
+
+/**
+ * Format pounds for a requirement label.
+ *
+ * `util.js` has `gbp` for the interface, but requirements are built in this
+ * module and importing the view layer into the data layer to borrow a comma
+ * would be the wrong direction.
+ *
+ * @param {number} amount
+ * @returns {string}
+ */
+function gbpish(amount) {
+  return '\u00a3' + Math.round(amount).toLocaleString('en-GB');
 }
 
 /** @type {ReadonlyArray<Omit<Listing, 'requirements'>>} */
 const RAW_LISTINGS = Object.freeze([
+  {
+    id: 'ml-090',
+    title: 'Studio, Talbot Road',
+    area: 'Old Trafford, Manchester',
+    monthlyRentGbp: 695,
+    bedrooms: 1,
+    allowsPets: false,
+    maxOccupants: 1,
+    availableFromIso: '2026-09-25',
+    tenancyEndsIso: '2027-09-24',
+    minReferences: 1,
+    minEmploymentMonths: 3,
+  },
   {
     id: 'ml-114',
     title: 'Two-bed garden flat, Wilbraham Road',
@@ -143,6 +197,7 @@ const RAW_LISTINGS = Object.freeze([
     maxOccupants: 2,
     availableFromIso: '2026-09-29',
     tenancyEndsIso: '2027-09-28',
+    nonSmokingOnly: true,
   },
   {
     id: 'ml-330',
@@ -154,6 +209,23 @@ const RAW_LISTINGS = Object.freeze([
     maxOccupants: 4,
     availableFromIso: '2026-11-01',
     tenancyEndsIso: '2027-10-31',
+    minCreditBand: 'good',
+  },
+  {
+    id: 'ml-410',
+    title: 'Warehouse conversion, Ducie Street',
+    area: 'Northern Quarter, Manchester',
+    monthlyRentGbp: 2250,
+    bedrooms: 2,
+    allowsPets: false,
+    maxOccupants: 2,
+    availableFromIso: '2026-10-12',
+    tenancyEndsIso: '2027-10-11',
+    rentMultiple: 3.5,
+    minReferences: 3,
+    minEmploymentMonths: 24,
+    minCreditBand: 'excellent',
+    nonSmokingOnly: true,
   },
 ]);
 

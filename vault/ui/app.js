@@ -9,7 +9,16 @@
  * followed by `sync()` so the browser's registry and the screen never disagree.
  */
 
-import { SEED_FACTS, readFacts, writeFact, resetFacts, CREDIT_BANDS } from '../lib/facts.js';
+import {
+  SEED_FACTS,
+  APPLICANTS,
+  readFacts,
+  writeFact,
+  resetFacts,
+  loadApplicant,
+  currentApplicantId,
+  CREDIT_BANDS,
+} from '../lib/facts.js';
 import { PREDICATES, findPredicate } from '../lib/predicates.js';
 import { compareDisclosure, counterfactualFor } from '../lib/counterfactual.js';
 import { activeProbes, MAX_DISTINCT_PROBES } from '../lib/probe.js';
@@ -357,6 +366,29 @@ function renderLedger() {
     : '<li><span class="what note">Nothing has been asked yet.</span></li>';
 }
 
+/**
+ * Draw the sample-applicant picker.
+ *
+ * Three of them rather than one, because a product that only ever shows a pass
+ * never shows what it is for. Each qualifies for exactly one of the five
+ * properties, so a reader can reach a yes, a no and a not-yet without editing a
+ * single field by hand.
+ */
+function renderApplicantPicker() {
+  const current = currentApplicantId();
+  const picker = $('applicant-picker');
+
+  picker.innerHTML = APPLICANTS.map(
+    (a) =>
+      '<option value="' + esc(a.id) + '"' + (a.id === current ? ' selected' : '') + '>' +
+      esc(a.label) + '</option>'
+  ).join('') + (current === null ? '<option value="" selected>Your own edits</option>' : '');
+
+  $('applicant-summary').textContent =
+    APPLICANTS.find((a) => a.id === current)?.summary ??
+    'You have edited the details, so this no longer matches any of the samples.';
+}
+
 function renderFacts() {
   const facts = readFacts();
   const byGroup = new Map(FIELD_GROUPS.map((g) => [g, []]));
@@ -423,6 +455,66 @@ function renderAll() {
 }
 
 /**
+ * Ask a destructive button to be pressed twice.
+ *
+ * `window.confirm` was the obvious choice and the wrong one. Chrome suppresses
+ * dialogs from a cross-origin iframe, and this panel spends most of its life
+ * embedded in a letting agent's page, so the guard would have been absent
+ * exactly where the button is easiest to hit by accident. It also blocks the
+ * page, which no confirmation needs to.
+ *
+ * So the button asks for itself again, in place, and gives up after a few
+ * seconds. Nothing is destroyed on a single press.
+ *
+ * @param {HTMLButtonElement} button
+ * @param {string} prompt what the second press will do
+ * @returns {boolean} true when this is the confirming press
+ */
+function confirmTwice(button, prompt) {
+  if (button.dataset.armed === 'yes') {
+    clearTimeout(Number(button.dataset.timer));
+    button.dataset.armed = 'no';
+    button.textContent = button.dataset.restLabel ?? button.textContent;
+    return true;
+  }
+
+  button.dataset.restLabel = button.textContent;
+  button.dataset.armed = 'yes';
+  button.textContent = prompt;
+  button.dataset.timer = String(
+    setTimeout(() => {
+      button.dataset.armed = 'no';
+      button.textContent = button.dataset.restLabel ?? button.textContent;
+    }, 5000)
+  );
+  return false;
+}
+
+/**
+ * Say what just happened.
+ *
+ * Every control that changes something says so. Before this, granting,
+ * withdrawing, clearing the log and restoring the sample all changed state in
+ * silence, and the only way to tell a working button from a broken one was to
+ * go looking for the effect.
+ *
+ * @param {string} message
+ * @param {'good' | 'bad'} [tone]
+ * @returns {void}
+ */
+function announce(message, tone = 'good') {
+  $('notice-slot').innerHTML =
+    '<div class="notice ' + tone + '">' + esc(message) + '</div>';
+  clearTimeout(announce.timer);
+  // Confirmations are transient; errors stay until something else replaces them.
+  if (tone === 'good') {
+    announce.timer = setTimeout(() => {
+      if ($('notice-slot').textContent === message) $('notice-slot').innerHTML = '';
+    }, 6000);
+  }
+}
+
+/**
  * Put a validation message into the words the field is labelled with.
  *
  * The stores validate against wire names, because that is what they hold. The
@@ -455,16 +547,30 @@ function humanise(key, error) {
  * @param {() => {ok: boolean, error?: string}} mutate
  * @param {string[]} [animate] permission names that should play their reveal
  */
-async function applyChange(mutate, animate = []) {
+async function applyChange(mutate, animate = [], said = '') {
   const result = mutate();
   if (!result.ok) {
-    $('notice-slot').innerHTML = '<div class="notice bad">' + esc(result.error ?? 'That did not work.') + '</div>';
+    announce(result.error ?? 'That change could not be saved. Nothing has been altered.', 'bad');
     return;
   }
-  $('notice-slot').innerHTML = '';
   freshlyGranted = new Set(animate);
   await sync();
   renderAll();
+
+  // Registration can fail after the grant has been recorded, and a row reading
+  // "allowed" beside a tool that does not exist is the one state this product
+  // must never show. Reconcile before claiming success.
+  const missing = (readGrants()[selected] ?? []).filter((n) => !liveToolNames().includes(n));
+  if (missing.length > 0) {
+    announce(
+      'Saved, but ' + missing.length + ' of these could not be made answerable in this browser. ' +
+        'They are recorded, and will work when you open this page in a browser that supports it.',
+      'bad'
+    );
+    return;
+  }
+  if (said) announce(said);
+  else $('notice-slot').innerHTML = '';
 }
 
 function wireEvents() {
@@ -478,7 +584,14 @@ function wireEvents() {
     if (!button) return;
     const name = button.dataset.name;
     const granting = button.dataset.act === 'grant';
-    applyChange(() => (granting ? grant(selected, name) : revoke(selected, name)), granting ? [name] : []);
+    const question = permissionQuestion(name).replace(/\?$/, '');
+    applyChange(
+      () => (granting ? grant(selected, name) : revoke(selected, name)),
+      granting ? [name] : [],
+      granting
+        ? 'Allowed. They may now ask: ' + question + '.'
+        : 'Withdrawn. That question can no longer be asked, and the tool has gone from their side.'
+    );
   });
 
   $('grant-typical').addEventListener('click', () =>
@@ -488,20 +601,59 @@ function wireEvents() {
         if (!r.ok) return r;
       }
       return { ok: true };
-    }, TYPICAL_GRANTS)
+    }, TYPICAL_GRANTS, 'Allowed all nine. That is the whole of an ordinary letting check, and it is nine bits.')
   );
 
-  $('revoke-all').addEventListener('click', () => applyChange(() => revokeAll(selected)));
+  $('revoke-all').addEventListener('click', () => {
+    const held = (readGrants()[selected] ?? []).length;
+    if (held === 0) {
+      announce('There was nothing to withdraw. This agent already holds no permissions.');
+      return;
+    }
+    // Irreversible, and it sits next to the button that grants.
+    if (!confirmTwice($('revoke-all'), 'Press again to withdraw all ' + held)) return;
+    applyChange(() => revokeAll(selected), [], 'Withdrew all ' + held + '. This agent can no longer ask anything.');
+  });
 
   $('clear-ledger').addEventListener('click', () => {
-    clearLedger();
+    const entries = readLedger().length;
+    if (entries === 0) {
+      announce('The log is already empty.');
+      return;
+    }
+    if (!confirmTwice($('clear-ledger'), 'Press again to clear ' + entries)) return;
+    const result = clearLedger();
+    if (!result.ok) {
+      announce('The log could not be cleared: ' + result.error, 'bad');
+      return;
+    }
     renderLedger();
+    announce('Log cleared.');
+  });
+
+  $('applicant-picker').addEventListener('change', (e) => {
+    const result = loadApplicant(e.target.value);
+    if (!result.ok) {
+      $('notice-slot').innerHTML = '<div class="notice bad">' + esc(result.error) + '</div>';
+      return;
+    }
+    renderFacts();
+    renderApplicantPicker();
+    renderAll();
+    announce('Switched to ' + e.target.selectedOptions[0].textContent + '. Every answer below now comes from their details.');
   });
 
   $('reset-facts').addEventListener('click', () => {
-    resetFacts();
+    if (!confirmTwice($('reset-facts'), 'Press again to discard your edits')) return;
+    const result = resetFacts();
+    if (!result.ok) {
+      $('notice-slot').innerHTML = '<div class="notice bad">' + esc(result.error) + '</div>';
+      return;
+    }
     renderFacts();
+    renderApplicantPicker();
     renderAll();
+    announce('Sample details restored.');
   });
 
   $('facts-form').addEventListener('change', (e) => {
@@ -515,7 +667,7 @@ function wireEvents() {
       renderFacts();
       return;
     }
-    $('notice-slot').innerHTML = '';
+    announce(fieldLabel(key).label + ' updated. Every answer that uses it has changed.');
     renderAll();
   });
 }
@@ -619,6 +771,7 @@ async function boot() {
   renderStatus();
   renderOriginPicker();
   renderFacts();
+  renderApplicantPicker();
   renderDemoSwitch();
   listenForDemoRequests();
   wireEvents();

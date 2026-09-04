@@ -93,7 +93,7 @@ function renderListings() {
       '<p class="listing-price">' + gbp(l.monthlyRentGbp) + '</p>' +
       '<p class="listing-meta" style="margin:0 0 .5rem">a month</p>' +
       '<button class="' + (active ? 'primary' : 'quiet') + '" data-listing="' + esc(l.id) + '">' +
-      (active ? 'Check this one' : 'Choose') + '</button>' +
+      (active ? 'Check again' : 'Check this one') + '</button>' +
       '</div>' +
       '</article>'
     );
@@ -259,15 +259,18 @@ function wireEvents() {
     const button = e.target.closest('button[data-listing]');
     if (!button) return;
     const id = button.dataset.listing;
-    if (id === activeListing) {
-      runChecks();
-      return;
+
+    if (id !== activeListing) {
+      activeListing = id;
+      // A different property has different thresholds, so the previous verdicts
+      // no longer describe this application.
+      clearResults();
+      renderAll();
     }
-    activeListing = id;
-    // A different property has different thresholds, so previous verdicts no
-    // longer describe this application.
-    clearResults();
-    renderAll();
+    // One press, one answer. Requiring a second press to actually run the check
+    // meant the button relabelled itself under the cursor and did nothing the
+    // first time, which reads as a broken control.
+    runChecks();
   });
 
   $('open-vault').addEventListener('click', () => window.open(vaultOrigin(), '_blank', 'noopener'));
