@@ -6,7 +6,7 @@
 - **Check it yourself:** <https://bureau-lettings.vercel.app/proof.html> reads the
   browser's own tool registry, live, on both origins
 - **Video:** VIDEO_URL
-- **Tool contract:** [TOOLS.md](TOOLS.md) &middot; **Licence:** MIT &middot; 108 tests, no runtime dependencies
+- **Tool contract:** [TOOLS.md](TOOLS.md) &middot; **Licence:** MIT &middot; 115 tests, no runtime dependencies
 
 To rent a flat in Britain you upload your payslips, your bank statements and
 your passport to six letting agents, who keep them forever. None of them wanted
@@ -112,7 +112,7 @@ URL, and use *DevTools → Application → WebMCP* to call every tool by hand. T
 ```sh
 git clone https://github.com/Sathvik-1007/bureau-webmcp
 cd bureau-webmcp
-npm test          # 108 tests: 58 unit, 50 in a real browser
+npm test          # 115 tests: 65 unit, 50 in a real browser
 ./tools/serve.sh  # two origins, :4001 and :4002
 ```
 
@@ -291,10 +291,10 @@ stop every one.
 ## Tests
 
 ```sh
-npm test    # 108 tests, 0 failures
+npm test    # 115 tests, 0 failures
 ```
 
-**58 unit tests** cover threshold behaviour at the exact boundary, calendar-month
+**65 unit tests** cover threshold behaviour at the exact boundary, calendar-month
 arithmetic, rejection of dates that `Date.parse` silently rolls, allowlist
 enforcement, tampered-record recovery, disclosure arithmetic, verdict parsing
 that is not fooled by a clause containing the opposite word, and the schema
