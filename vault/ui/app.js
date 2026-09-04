@@ -24,6 +24,7 @@ import {
   isGranted,
 } from '../lib/grants.js';
 import { compareDisclosure } from '../lib/counterfactual.js';
+import { activeProbes, MAX_DISTINCT_PROBES } from '../lib/probe.js';
 import {
   sync,
   registerManagementTools,
@@ -264,6 +265,43 @@ function renderLiveTools() {
     : '<li style="padding:10px 14px;color:var(--ink-faint)">nothing registered</li>';
 }
 
+/**
+ * Warn when an origin is asking the same threshold question over and over.
+ *
+ * Hidden entirely when nothing is probing. A privacy warning that is always on
+ * screen is wallpaper, and the one time it matters nobody sees it.
+ */
+function renderProbes() {
+  const probes = activeProbes();
+  const panel = $('probe-panel');
+
+  if (probes.length === 0) {
+    panel.hidden = true;
+    return;
+  }
+  panel.hidden = false;
+
+  $('probe-report').innerHTML =
+    '<p style="margin:0 0 10px">A permission you granted is being used to work out the number ' +
+    'behind it. Each answer was a legitimate yes or no. The <em>sequence</em> is not.</p>' +
+    '<ul class="reset">' +
+    probes
+      .map(
+        (p) =>
+          '<li style="padding:8px 0;border-bottom:1px solid var(--line)">' +
+          '<div class="cap-name">' + esc(p.predicate) + '</div>' +
+          '<div class="cap-title">' + esc(p.origin) + '</div>' +
+          '<div class="cap-reveals">asked ' + p.probes + ' times, has narrowed the value by about ' +
+          '<strong style="color:var(--warn)">' + p.bits + ' bits</strong>' +
+          (p.bracket === null ? '' : ', to a window of ' + p.bracket) +
+          '</div></li>'
+      )
+      .join('') +
+    '</ul>' +
+    '<p class="note" style="margin:10px 0 0">The vault stops answering after ' +
+    MAX_DISTINCT_PROBES + ' different thresholds. Revoking the permission stops it now.</p>';
+}
+
 /** Draw the audit ledger. */
 function renderLedger() {
   const entries = readLedger().slice(0, 40);
@@ -339,6 +377,7 @@ function renderAll() {
   renderPredicates();
   renderDisclosure();
   renderCounterfactual();
+  renderProbes();
   renderLiveTools();
   renderLedger();
 }

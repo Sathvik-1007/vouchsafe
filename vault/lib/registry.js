@@ -23,6 +23,7 @@
 import { readFacts, writeFact, SEED_FACTS, errText } from './facts.js';
 import { PREDICATES, findPredicate } from './predicates.js';
 import { compareDisclosure, counterfactualFor } from './counterfactual.js';
+import { checkProbe, recordProbe, activeProbes, bracketFor } from './probe.js';
 import {
   readGrants,
   grant,
@@ -205,6 +206,23 @@ async function registerPredicate(name, origins, signature) {
 async function runPredicate(predicate, args, audience) {
   const caller = audience.length === 1 ? audience[0] : audience.join(' | ');
 
+  // A granted caller can still abuse a threshold predicate by asking it
+  // repeatedly with different thresholds, which brackets the underlying number.
+  // The grant system cannot see that, because every individual call is
+  // authorised. This is the only place it can be caught.
+  const probe = checkProbe(caller, predicate.name, args);
+  if (!probe.allow) {
+    appendLedger({
+      kind: 'blocked',
+      origin: caller,
+      predicate: predicate.name,
+      args,
+      error: probe.reason,
+    });
+    emit();
+    return 'Error: ' + probe.reason;
+  }
+
   let outcome;
   try {
     outcome = predicate.evaluate(readFacts(), args);
@@ -228,6 +246,10 @@ async function runPredicate(predicate, args, audience) {
     emit();
     return 'Error: ' + outcome.error;
   }
+
+  // Record what was actually revealed, so the next call sees a tighter bracket.
+  const said = outcome.answer.trim().toLowerCase().startsWith('yes');
+  recordProbe(caller, predicate.name, args, said);
 
   appendLedger({
     kind: 'answer',
@@ -467,6 +489,31 @@ export async function registerManagementTools() {
           lines.push('Which would also have revealed: ' + c.alsoReveals.join(', ') + '.');
         }
         return lines.join('\n');
+      },
+    },
+    {
+      name: 'vault_probe_report',
+      description:
+        'Report whether any origin is asking the same threshold question repeatedly to reconstruct the number behind it, and how much it has worked out so far.',
+      inputSchema: { type: 'object', properties: {}, required: [] },
+      readOnly: true,
+      run: () => {
+        const probes = activeProbes();
+        if (probes.length === 0) return 'No origin is probing. Every permission has been asked at most once per threshold.';
+        return probes
+          .map(
+            (p) =>
+              p.origin +
+              ' has asked ' +
+              p.predicate +
+              ' ' +
+              p.probes +
+              ' times and narrowed the underlying value by about ' +
+              p.bits +
+              ' bits' +
+              (p.bracket === null ? '' : ', to a window of ' + p.bracket)
+          )
+          .join('\n');
       },
     },
     {

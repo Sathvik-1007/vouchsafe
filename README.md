@@ -67,7 +67,7 @@ URL, and use *DevTools → Application → WebMCP* to call every tool by hand. T
 ```sh
 git clone https://github.com/Sathvik-1007/bureau-webmcp
 cd bureau-webmcp
-npm test          # 44 unit tests
+npm test          # 58 tests
 ./tools/serve.sh  # two origins, :4001 and :4002
 ```
 
@@ -78,7 +78,7 @@ secure contexts, so the full cross-origin flow works locally.
 
 ## The tool surface
 
-**28 tools across two origins**, and which ones exist depends on what you granted.
+**31 tools across two origins**, and which ones exist depends on what you granted.
 
 ### The vault, `vault/lib/predicates.js` — 13 questions it will answer
 
@@ -103,13 +103,14 @@ Each is exposed only to the origins you name, each returns a word, each is price
 The last two exist so the meter has something to measure against. No listing asks
 for them, and a test asserts that.
 
-### The vault, `vault/lib/registry.js` — 9 tools only *you* can reach
+### The vault, `vault/lib/registry.js` — 12 tools only *you* can reach
 
 Registered with no `exposedTo`, so they are same-origin and a letting agent cannot
 touch them however many predicates it holds. This is what lets you say *"revoke
 everything from Marlow and Reed"* to your own agent:
 `vault_list_predicates`, `vault_list_grants`, `vault_grant`, `vault_revoke`,
-`vault_revoke_all`, `vault_disclosure_report`, `vault_read_ledger`,
+`vault_revoke_all`, `vault_disclosure_report`, `vault_compare_disclosure`,
+`vault_explain_permission`, `vault_probe_report`, `vault_read_ledger`,
 `vault_update_fact`, `vault_known_origins`.
 
 ### The letting agent — 6 of its own, plus one proxy per permission
@@ -191,6 +192,40 @@ agent can read it and retry.
 
 ---
 
+## The attack we did not wave away
+
+A yes-or-no permission leaks one bit. But the caller picks the threshold, so it
+can ask again:
+
+```
+rent 2000, multiple 3  ->  no    income is under   72,000
+rent 1500, multiple 3  ->  no    income is under   54,000
+rent 1300, multiple 3  ->  no    income is under   46,800
+rent 1200, multiple 3  ->  no    income is under   43,200
+rent 1175, multiple 3  ->  no    income is under   42,300
+rent 1160, multiple 3  ->  Error: Refused. 5 different thresholds have already
+                                  been tested against income_meets_multiple.
+```
+
+Every one of those answers was a legitimate single bit from a permission the
+renter granted. The **sequence** is a salary disclosure wearing a predicate's
+clothes, and the grant system cannot see it, because each call is authorised.
+
+So the vault tracks the bracket each origin has established per predicate,
+prices what it has worked out in bits, refuses once the search has gone far
+enough, and tells the renter who is doing it. That transcript above is real
+output from the running app. An identical threshold asked twice is a retry and
+is never penalised; probes age out after fifteen minutes; one origin probing
+does not obstruct another. All of it is in `vault/lib/probe.js` with 11 tests.
+
+**What this does not claim.** It does not make threshold predicates leak-proof.
+A patient caller spread across sessions, or several colluding origins pooling
+answers, defeats a per-origin window. Adding noise to the answers would bound
+the leak properly and would also make a legitimate affordability check
+occasionally wrong, which a letting decision cannot absorb. This is the cheap
+honest version: it stops the obvious attack and says plainly that it does not
+stop every one.
+
 ## Security posture
 
 - The vault ships **no `fetch` call**. Grep for it.
@@ -211,7 +246,7 @@ agent can read it and retry.
 ## Tests
 
 ```sh
-npm test    # 44 tests, 0 failures
+npm test    # 58 tests, 0 failures
 ```
 
 Covering threshold behaviour at the exact boundary, calendar-month arithmetic,
