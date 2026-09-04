@@ -37,8 +37,16 @@ import {
 /** Bits at which the meter turns: nine one-bit answers is the whole ordinary check. */
 const BITS_ROUTINE = 9;
 
-/** Bits at which a raw disclosure has certainly been made. */
-const BITS_ALARMING = 20;
+/**
+ * Bits at which the meter turns red.
+ *
+ * Anything above the nine one-bit answers of an ordinary check means a raw
+ * disclosure is live. The cheapest of those, an exact salary, costs 9.8, so a
+ * routine check plus one raw disclosure is 18.8 and must read as alarming. An
+ * earlier value of 20 sat above the most expensive single tool in the
+ * catalogue, at 19.9, so the red state was unreachable.
+ */
+const BITS_ALARMING = 12;
 
 /** The nine permissions an ordinary English letting check actually needs. */
 const TYPICAL_GRANTS = Object.freeze([
@@ -86,16 +94,18 @@ function esc(value) {
 function renderStatus() {
   const available = webmcpAvailable();
   const pill = $('mcp-status');
-  pill.textContent = available ? 'connected' : 'no agent support';
+  // "Ready", not "connected". Nothing is connected to anything; the page is
+  // checking whether this browser can hand tools to an assistant at all.
+  pill.textContent = available ? 'Ready for your assistant' : 'Your browser cannot do this yet';
   pill.className = 'tag ' + (available ? 'live' : 'off');
   $('origin-label').textContent = location.origin;
 
   if (available) return;
   $('notice-slot').innerHTML =
-    '<div class="notice"><strong>This browser cannot talk to agents.</strong> ' +
-    'Your file still works and is still yours, but no question can be made answerable. ' +
-    'Open in Chrome 149 or later, or switch on ' +
-    '<code style="font-family:var(--mono)">chrome://flags/#enable-webmcp-testing</code>.</div>';
+    '<div class="notice"><strong>Your browser cannot hand this page to an assistant yet.</strong> ' +
+    'Everything here still works, and your details are still only on this computer. To let an ' +
+    'assistant answer for you, open this page in Chrome 149 or later. ' +
+    '<a href="https://developer.chrome.com/docs/ai/webmcp" target="_blank" rel="noopener">How to turn it on</a>.</div>';
 }
 
 function renderOriginPicker() {
@@ -201,7 +211,7 @@ function renderDisclosure() {
     bits === 0
       ? 'This agent knows nothing about you.'
       : bits <= BITS_ROUTINE
-        ? 'Every one of these is a single yes or no. Uploading the documents that answer the same questions would give away thousands of times more, and permanently.'
+        ? 'Every one of these is a single yes or no, and it expires the moment you withdraw it. The documents that answer the same questions would have been a copy, kept.'
         : bits < BITS_ALARMING
           ? 'Past the ordinary check. Something here gives away more than a yes or no.'
           : 'A raw disclosure is live. This agent can identify you directly.';
@@ -412,6 +422,25 @@ function renderAll() {
   freshlyGranted = new Set();
 }
 
+/**
+ * Put a validation message into the words the field is labelled with.
+ *
+ * The stores validate against wire names, because that is what they hold. The
+ * person is looking at a field called "People moving in, including you" and
+ * being told "householdSize cannot exceed 32", which reads as someone else's
+ * error leaking through.
+ *
+ * @param {string} key   fact key the message is about
+ * @param {string} error message as the store phrased it
+ * @returns {string}
+ */
+function humanise(key, error) {
+  const label = fieldLabel(key).label;
+  return error.startsWith(key)
+    ? label + error.slice(key.length)
+    : label + ': ' + error;
+}
+
 /* -------------------------------------------------------------------------- */
 /* actions                                                                    */
 /* -------------------------------------------------------------------------- */
@@ -478,9 +507,11 @@ function wireEvents() {
   $('facts-form').addEventListener('change', (e) => {
     const field = e.target.closest('[data-fact]');
     if (!field) return;
-    const result = writeFact(field.dataset.fact, field.value);
+    const key = field.dataset.fact;
+    const result = writeFact(key, field.value);
     if (!result.ok) {
-      $('notice-slot').innerHTML = '<div class="notice bad">' + esc(result.error) + '</div>';
+      $('notice-slot').innerHTML =
+        '<div class="notice bad">' + esc(humanise(key, result.error)) + '</div>';
       renderFacts();
       return;
     }
@@ -503,15 +534,37 @@ function wireEvents() {
  */
 let demoArmed = false;
 
+/**
+ * Answer a request from the embedding page.
+ *
+ * Every request gets a reply, refusals included. Silence was the old behaviour,
+ * and it let the walkthrough carry on narrating a grant that never happened.
+ * Saying no out loud is what lets the other side stop.
+ *
+ * @param {MessageEvent} event
+ * @param {boolean} ok
+ * @returns {void}
+ */
+function replyToHost(event, ok) {
+  event.source?.postMessage(
+    { source: 'bureau-vault', ok, granted: (readGrants()[selected] ?? []).length },
+    event.origin
+  );
+}
+
 function listenForDemoRequests() {
-  window.addEventListener('message', (event) => {
+  window.addEventListener('message', async (event) => {
     if (event.origin !== hostOrigin()) return;
     if (event.data?.source !== 'bureau-demo') return;
-    if (!demoArmed) return;
+
+    if (!demoArmed) {
+      replyToHost(event, false);
+      return;
+    }
 
     const { action, predicate } = event.data;
     if (action === 'grant-typical') {
-      applyChange(() => {
+      await applyChange(() => {
         for (const name of TYPICAL_GRANTS) {
           const r = grant(selected, name);
           if (!r.ok) return r;
@@ -519,10 +572,17 @@ function listenForDemoRequests() {
         return { ok: true };
       }, TYPICAL_GRANTS);
     } else if (action === 'revoke-all') {
-      applyChange(() => revokeAll(selected));
+      await applyChange(() => revokeAll(selected));
     } else if (action === 'revoke' && typeof predicate === 'string') {
-      applyChange(() => revoke(selected, predicate));
+      await applyChange(() => revoke(selected, predicate));
+    } else {
+      replyToHost(event, false);
+      return;
     }
+
+    // Replied only after the change has landed and the registry has re-synced,
+    // so the count the other side receives is the count that is actually live.
+    replyToHost(event, true);
   });
 }
 

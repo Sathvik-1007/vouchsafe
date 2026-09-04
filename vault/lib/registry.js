@@ -457,9 +457,11 @@ export async function registerManagementTools() {
         if (granted.length === 0) return 'Nothing is granted, so nothing has been disclosed.';
         const c = compareDisclosure(granted);
         return [
-          'Answered by permission: ' + c.predicateBits + ' bits across ' + c.predicateBits + ' yes-or-no answers.',
+          'Answered by permission: ' + c.predicateBits + ' bit' +
+            (c.predicateBits === 1 ? '' : 's') + ', one per question.',
           'Avoided by not uploading: ' + c.documents.join('; ') + '.',
-          'That is ' + c.extraFacts + ' facts about you that were never asked for and never handed over, roughly ' + c.documentBits + ' bits, about ' + c.ratio + ' times the disclosure.',
+          'That is ' + c.extraFacts + ' things about the applicant that nobody asked for and nobody received: roughly ' +
+            c.documentBits + ' bits, about ' + c.ratio + ' times what the permissions gave away.',
         ].join('\n');
       },
     },

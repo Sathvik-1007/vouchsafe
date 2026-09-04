@@ -244,7 +244,13 @@ async function main() {
 
   await check('page loads with WebMCP available', async () => {
     eq(await browser.evalIn(VAULT_ORIGIN, '!!document.modelContext'), true, 'modelContext');
-    eq(await textIn(VAULT_ORIGIN, '#mcp-status'), 'connected', 'status pill');
+    // Assert the state the pill reports, not the sentence it uses. A copy edit
+    // should not fail a behaviour test.
+    eq(
+      await browser.evalIn(VAULT_ORIGIN, `document.getElementById('mcp-status').className`),
+      'tag live',
+      'status pill does not report a working WebMCP'
+    );
   });
 
   await check('management tools register, and only same-origin ones', async () => {
@@ -491,6 +497,60 @@ async function main() {
     const own = await toolsIn(HOST_ORIGIN);
     ok(!own.some((t) => t.startsWith('applicant_')), 'proxies survived: ' + own.join(','));
     ok((await textIn(HOST_ORIGIN, '#graph-caption')).includes('Nothing yet'), 'caption did not reset');
+  });
+
+  // ---- the walkthrough -----------------------------------------------------
+  console.log('\nthe walkthrough');
+
+  await check('an unarmed vault refuses, and the walkthrough stops and says so', async () => {
+    // The defect this pins: the walkthrough used to post a request, wait a fixed
+    // 900ms, and narrate onward whether or not anything happened. A visitor who
+    // had not armed the vault saw "You allow nine questions" over an empty
+    // diagram, then "Nine questions. Nine one-word answers." over nine
+    // NOT GRANTED lines.
+    await clickVault('#revoke-all');
+    await sleep(1200);
+    await browser.evalIn(VAULT_ORIGIN, `(() => {
+      const t = document.getElementById('demo-toggle');
+      if (t && t.checked) { t.checked = false; t.dispatchEvent(new Event('change')); }
+      return 'unarmed';
+    })()`);
+
+    await browser.evalIn(HOST_ORIGIN, `document.getElementById('play-demo').click()`);
+    // Steps 1 and 2 only narrate; step 3 is the first that asks the vault.
+    await sleep(9000);
+
+    const caption = await textIn(HOST_ORIGIN, '#demo-caption');
+    ok(/declined|did not answer/i.test(caption), 'the walkthrough narrated past a refusal: ' + caption);
+    ok(
+      (await textIn(HOST_ORIGIN, '#demo-progress')).startsWith('Stopped'),
+      'a stopped walkthrough must not present itself as a running one'
+    );
+    ok(
+      /Let the walkthrough use these switches/i.test(await textIn(HOST_ORIGIN, '#demo-detail')),
+      'the refusal must point at the control that resolves it'
+    );
+    // Nothing was granted behind the viewer's back.
+    eq(await textIn(VAULT_ORIGIN, '#stage-bits'), '0', 'an unarmed vault granted anyway');
+  });
+
+  await check('an armed vault lets the walkthrough run to the end', async () => {
+    await browser.evalIn(VAULT_ORIGIN, `(() => {
+      const t = document.getElementById('demo-toggle');
+      t.checked = true; t.dispatchEvent(new Event('change'));
+      return 'armed';
+    })()`);
+    await sleep(7000);   // let the halted run release the button
+
+    await browser.evalIn(HOST_ORIGIN, `document.getElementById('play-demo').click()`);
+    await sleep(14000);  // through the grant and the first check
+
+    const borrowed = await federatedFromVault();
+    eq(borrowed.length, 9, 'the walkthrough did not actually grant anything');
+    ok(
+      !(await textIn(HOST_ORIGIN, '#demo-progress')).startsWith('Stopped'),
+      'an armed run stopped anyway: ' + (await textIn(HOST_ORIGIN, '#demo-caption'))
+    );
   });
 
   // ---- quality floor -------------------------------------------------------

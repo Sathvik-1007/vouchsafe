@@ -13,3 +13,10 @@ for app in vault host; do
   } > "$app/config.js"
   echo "wrote $app/config.js"
 done
+
+# The stylesheet has the same problem for the same reason: two origins, two
+# document roots, and neither may fetch from the other. It was being copied by
+# hand, which is 800-odd lines kept identical on trust. Edit vault/ui/base.css;
+# this makes the copy.
+cp vault/ui/base.css host/ui/base.css
+echo "wrote host/ui/base.css"

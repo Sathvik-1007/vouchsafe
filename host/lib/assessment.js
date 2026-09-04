@@ -124,6 +124,35 @@ export async function assess(listingId, federatedTools) {
 }
 
 /**
+ * Join a list into a sentence the way a person writes one.
+ *
+ * "a, b and c", not "a, b, c". A comma-separated dump of identifiers reads as
+ * machine output, which is exactly what this copy is trying not to be.
+ *
+ * @param {string[]} items
+ * @returns {string}
+ */
+function sentence(items) {
+  if (items.length === 0) return 'nothing';
+  if (items.length === 1) return items[0];
+  return items.slice(0, -1).join(', ') + ' and ' + items[items.length - 1];
+}
+
+/**
+ * Lower-case a requirement label so it reads inside a sentence.
+ *
+ * Only the first character, so "Right to rent valid to 2027-10-04" becomes
+ * "right to rent valid to 2027-10-04" without flattening the date or any
+ * proper noun later in the string.
+ *
+ * @param {string} label
+ * @returns {string}
+ */
+function lower(label) {
+  return label.charAt(0).toLowerCase() + label.slice(1);
+}
+
+/**
  * Summarise an assessment into the decision a letting agent would actually make.
  *
  * @param {CheckResult[]} checks
@@ -147,7 +176,10 @@ export function summarise(checks) {
       failed,
       blocked,
       total: checks.length,
-      reason: 'A required check came back no: ' + mandatoryFailed.map((c) => c.predicate).join(', '),
+      // `label`, not `predicate`. The wire name is for the agent; a person
+      // reading a rejection should be told which requirement they missed, in
+      // the same words the requirement was stated in.
+      reason: sentence(mandatoryFailed.map((c) => lower(c.label))),
     };
   }
   if (mandatoryBlocked.length > 0) {
@@ -157,12 +189,12 @@ export function summarise(checks) {
       failed,
       blocked,
       total: checks.length,
-      reason:
-        'Waiting on permission for: ' + mandatoryBlocked.map((c) => c.predicate).join(', '),
+      reason: 'We still need to ask about ' + sentence(mandatoryBlocked.map((c) => lower(c.label))) + '.',
     };
   }
   if (checks.length === 0) {
-    return { decision: 'incomplete', passed, failed, blocked, total: 0, reason: 'No checks have run.' };
+    return { decision: 'incomplete', passed, failed, blocked, total: 0,
+      reason: 'Nothing has been checked yet.' };
   }
   return {
     decision: 'eligible',
@@ -170,7 +202,7 @@ export function summarise(checks) {
     failed,
     blocked,
     total: checks.length,
-    reason: 'Every required check was answered yes by the applicant’s vault.',
+    reason: 'Every requirement was answered yes.',
   };
 }
 

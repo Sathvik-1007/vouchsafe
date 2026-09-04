@@ -34,15 +34,18 @@ const $ = (id) => document.getElementById(id);
 function renderStatus() {
   const pill = $('mcp-status');
   const available = webmcpAvailable();
-  pill.textContent = available ? 'connected' : 'no agent support';
+  // "Ready", not "connected". Nothing is connected to anything; the page is
+  // checking whether this browser can hand tools to an assistant at all.
+  pill.textContent = available ? 'Ready for your assistant' : 'Your browser cannot do this yet';
   pill.className = 'tag ' + (available ? 'live' : 'off');
   $('origin-label').textContent = location.origin;
 
   if (available) return;
   $('notice-slot').innerHTML =
-    '<div class="notice"><strong>This browser cannot talk to agents.</strong> ' +
-    'The site works, but no question can be asked and no check can run. Open in Chrome 149 ' +
-    'or later, or switch on <code style="font-family:var(--mono)">chrome://flags/#enable-webmcp-testing</code>.</div>';
+    '<div class="notice"><strong>Your browser cannot hand this page to an assistant yet.</strong> ' +
+    'Everything here still works, and your details are still only on this computer. To let an ' +
+    'assistant answer for you, open this page in Chrome 149 or later. ' +
+    '<a href="https://developer.chrome.com/docs/ai/webmcp" target="_blank" rel="noopener">How to turn it on</a>.</div>';
 }
 
 function renderGraph() {
@@ -128,7 +131,7 @@ function renderAssessment() {
     .map((c) => {
       const word =
         c.status === 'pass' ? 'yes' : c.status === 'fail' ? 'no'
-          : c.status === 'blocked' ? 'not allowed' : 'error';
+          : c.status === 'blocked' ? 'not yet' : 'no answer';
       const cls = c.status === 'pass' ? '' : c.status === 'fail' ? 'no' : 'pending';
       return (
         '<div class="reference-row">' +
@@ -234,9 +237,17 @@ function renderDemo(state) {
   stage.hidden = false;
   button.disabled = true;
   button.textContent = 'Playing';
-  $('demo-progress').textContent = 'Step ' + state.index + ' of ' + state.total;
+  $('demo-progress').textContent = state.halted
+    ? 'Stopped at step ' + state.index + ' of ' + state.total
+    : 'Step ' + state.index + ' of ' + state.total;
   $('demo-caption').textContent = state.caption;
   $('demo-detail').textContent = state.detail;
+
+  // A stopped walkthrough must not look like a finished one. It carries the
+  // weight of an error, because something the viewer was promised did not
+  // happen and they need to know why.
+  const panel = stage.firstElementChild;
+  if (panel) panel.className = state.halted ? 'notice' : 'sunk';
 
   const out = $('demo-output');
   out.hidden = state.output.length === 0;

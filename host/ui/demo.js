@@ -72,22 +72,90 @@ async function callOwnTool(name, args) {
 }
 
 /**
- * Ask the vault to change a grant.
+ * How long to wait for the vault to answer, in ms.
  *
- * The vault is a separate origin, so this is a request, not a command. It is
- * sent with an explicit target origin rather than "*", so the message cannot be
- * read by whatever else the frame might navigate to.
+ * The vault applies the change and re-syncs its registry before replying, which
+ * is a handful of synchronous writes. Past this, the vault is not listening,
+ * which is a real condition the walkthrough must report rather than paper over.
+ */
+const VAULT_REPLY_TIMEOUT_MS = 4000;
+
+/**
+ * Ask the vault to change a grant, and wait to hear whether it did.
+ *
+ * The vault is a separate origin, so this is a request and the vault is free to
+ * refuse. An earlier version posted the message and resolved on a fixed timer,
+ * so the walkthrough carried on narrating whether or not anything happened:
+ * with permission to drive switched off, a viewer saw the caption "You allow
+ * nine questions" over an empty diagram. A walkthrough that describes things
+ * that did not happen is worse than no walkthrough at all.
+ *
+ * The vault now replies with what it actually did, so the caller can tell done
+ * from refused from not listening.
  *
  * @param {'grant-typical' | 'revoke' | 'revoke-all'} action
  * @param {string} [predicate]
- * @returns {Promise<void>}
+ * @returns {Promise<{ok: true, granted: number} | {ok: false, reason: 'refused' | 'silent'}>}
  */
 function askVault(action, predicate) {
   const frame = document.getElementById('vault-frame');
-  frame?.contentWindow?.postMessage({ source: 'bureau-demo', action, predicate }, vaultOrigin());
-  // The vault answers by changing its registrations, which reaches this page as
-  // a `toolchange` event, so there is nothing to await on the message itself.
-  return new Promise((resolve) => setTimeout(resolve, 900));
+  const target = vaultOrigin();
+  if (!frame?.contentWindow) return Promise.resolve({ ok: false, reason: 'silent' });
+
+  return new Promise((resolve) => {
+    const timer = setTimeout(() => {
+      window.removeEventListener('message', onReply);
+      resolve({ ok: false, reason: 'silent' });
+    }, VAULT_REPLY_TIMEOUT_MS);
+
+    function onReply(event) {
+      // Origin before payload. A reply that did not come from the vault is not
+      // a reply.
+      if (event.origin !== target) return;
+      if (event.data?.source !== 'bureau-vault') return;
+      clearTimeout(timer);
+      window.removeEventListener('message', onReply);
+      resolve(
+        event.data.ok
+          ? { ok: true, granted: Number(event.data.granted) || 0 }
+          : { ok: false, reason: 'refused' }
+      );
+    }
+
+    window.addEventListener('message', onReply);
+    // Targeted, not "*", so the message cannot be read by whatever else the
+    // frame might navigate to.
+    frame.contentWindow.postMessage({ source: 'bureau-demo', action, predicate }, target);
+  });
+}
+
+/**
+ * Turn a vault reply into either output to show, or a reason to stop.
+ *
+ * The walkthrough drives switches that belong to somebody else. When the vault
+ * declines, the only honest thing to do is stop and say so, because every
+ * caption after that point would be describing a state that was never reached.
+ *
+ * @param {{ok: true, granted: number} | {ok: false, reason: 'refused' | 'silent'}} reply
+ * @returns {string | {halt: string, detail: string}}
+ */
+function halted(reply) {
+  if (reply.ok) {
+    return reply.granted === 0
+      ? 'Your file now allows nothing.'
+      : 'Your file now allows ' + reply.granted + ' question' + (reply.granted === 1 ? '' : 's') + '.';
+  }
+  if (reply.reason === 'refused') {
+    return {
+      halt: 'Your file declined, so the walkthrough stopped here.',
+      detail:
+        'This site cannot change your permissions unless you let it. Tick "Let the walkthrough use these switches" in your file, then start again.',
+    };
+  }
+  return {
+    halt: 'Your file did not answer, so the walkthrough stopped here.',
+    detail: 'It may still be loading. Give it a moment and start again.',
+  };
 }
 
 /**
@@ -113,13 +181,13 @@ function steps() {
       say: 'Right now this agency knows nothing about you.',
       look: '#graph',
       detail: 'Watch the diagram.',
-      act: async () => askVault('revoke-all'),
+      act: async () => halted(await askVault('revoke-all')),
     },
     {
       say: 'You allow nine questions, in your own file, on your own website.',
       look: '#graph',
       detail: 'Each is a question they may ask. Not a document they may keep.',
-      act: async () => askVault('grant-typical'),
+      act: async () => halted(await askVault('grant-typical')),
     },
     {
       say: 'Nine questions just became answerable across the boundary between two websites.',
@@ -212,11 +280,30 @@ export async function runDemo(onUpdate) {
 
       let output = '';
       if (step.act) {
+        let result;
         try {
-          output = String((await step.act()) ?? '');
+          result = await step.act();
         } catch (err) {
-          output = 'Error: ' + (err instanceof Error ? err.message : String(err));
+          result = 'Error: ' + (err instanceof Error ? err.message : String(err));
         }
+
+        // A step can end the run. Every caption after a declined request would
+        // be describing a state that was never reached, so we stop on the truth
+        // rather than narrate past it.
+        if (result !== null && typeof result === 'object' && 'halt' in result) {
+          onUpdate({
+            caption: result.halt,
+            detail: result.detail ?? '',
+            output: '',
+            index: i + 1,
+            total: script.length,
+            halted: true,
+          });
+          await new Promise((r) => setTimeout(r, 6000));
+          return;
+        }
+
+        output = String(result ?? '');
         onUpdate({
           caption: step.say,
           detail: step.detail ?? '',
