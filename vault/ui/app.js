@@ -426,7 +426,7 @@ function renderFacts() {
 
     if (key === 'creditBand') {
       control =
-        '<select data-fact="' + esc(key) + '" id="f-' + esc(key) + '">' +
+        '<select data-fact="' + esc(key) + '" name="' + esc(key) + '" id="f-' + esc(key) + '">' +
         CREDIT_BANDS.map(
           (b) =>
             '<option value="' + b + '"' + (b === value ? ' selected' : '') + '>' +
@@ -434,15 +434,17 @@ function renderFacts() {
         ).join('') + '</select>';
     } else if (typeof SEED_FACTS[key] === 'boolean') {
       control =
-        '<select data-fact="' + esc(key) + '" id="f-' + esc(key) + '">' +
+        '<select data-fact="' + esc(key) + '" name="' + esc(key) + '" id="f-' + esc(key) + '">' +
         '<option value="true"' + (value ? ' selected' : '') + '>Yes</option>' +
         '<option value="false"' + (!value ? ' selected' : '') + '>No</option></select>';
     } else {
       const isDate = key.endsWith('Iso');
       const type = isDate ? 'date' : typeof SEED_FACTS[key] === 'number' ? 'number' : 'text';
+      // `name` is what Chrome reads to derive this field's parameter. Without
+      // it the field exists on screen and is invisible to the declarative tool.
       control =
-        '<input type="' + type + '" data-fact="' + esc(key) + '" id="f-' + esc(key) +
-        '" value="' + esc(value) + '">';
+        '<input type="' + type + '" data-fact="' + esc(key) + '" name="' + esc(key) +
+        '" id="f-' + esc(key) + '" value="' + esc(value) + '">';
     }
 
     (byGroup.get(meta.group) ?? byGroup.get('You')).push(
@@ -455,7 +457,7 @@ function renderFacts() {
     );
   }
 
-  $('facts-form').innerHTML = FIELD_GROUPS.map(
+  $('facts-fields').innerHTML = FIELD_GROUPS.map(
     (g) =>
       '<fieldset style="border:0;padding:0;margin:0 0 1.5rem">' +
       '<legend style="font-family:var(--serif);font-variation-settings:\'opsz\' 24;' +
@@ -635,6 +637,35 @@ function wireEvents() {
     renderApplicantPicker();
     renderAll();
     announce('Sample details restored.');
+  });
+
+  // Chrome parks a declarative call here until this fires, so submit is the
+  // moment the person commits whatever was prepared, by them or by an agent.
+  $('facts-form').addEventListener('submit', (event) => {
+    event.preventDefault();
+    const problems = [];
+    let saved = 0;
+
+    for (const field of $('facts-fields').querySelectorAll('[data-fact]')) {
+      const key = field.dataset.fact;
+      const result = writeFact(key, field.value);
+      if (result.ok) saved += 1;
+      else problems.push(humanise(key, result.error));
+    }
+
+    renderApplicantPicker();
+    renderAll();
+
+    if (problems.length > 0) {
+      announce(
+        problems.length === 1 ? 'One detail could not be saved.' : problems.length + ' details could not be saved.',
+        'bad',
+        problems.join(' ')
+      );
+      return;
+    }
+    announce('Saved. Every answer below now comes from these details.');
+    $('facts-status').textContent = 'Saved ' + saved + ' details.';
   });
 
   $('facts-form').addEventListener('change', (e) => {

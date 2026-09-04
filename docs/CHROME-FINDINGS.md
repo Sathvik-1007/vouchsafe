@@ -87,6 +87,34 @@ it gone. Measured: 15 published tools before, 14 after, and
 `applicant_income_meets_multiple` absent from the host's own `getTools()`. No
 `postMessage`, no server, no polling.
 
+### 7. The declarative API derives the schema from the form, and parks the call
+
+A `<form>` carrying `toolname` becomes a tool with no JavaScript at all. Chrome
+reads the fields and writes the JSON Schema itself, including turning a
+`<select>` into an enumeration:
+
+```
+name:        prepare_file_update
+inputSchema: 16 properties, derived from the fields, none written by us
+             {"type":"object","properties":{"creditBand":{"type":"string",
+              "anyOf":[{"type":"string","const":"very_poor","title":"very poor"}, ...
+```
+
+The derivation is driven by `name`, not by `id` and not by the field simply
+existing. A field without one renders, accepts typing and is completely absent
+from the tool's schema, with no warning anywhere. We lost fourteen of sixteen
+parameters to exactly that before noticing.
+
+Two things worth knowing. The schema comes back as a **string** here too, the
+same asymmetry as finding 1, so anything round-tripping a declarative tool needs
+the same parse.
+
+And omitting `toolautosubmit` is not a small detail. Without it Chrome holds the
+agent's call until a human presses the submit button, which is a human-in-the-
+loop gate the imperative API cannot express: an imperative `execute` runs the
+moment it is called. The vault's file editor uses this deliberately, so an
+assistant can fill the form in and the person still commits it.
+
 ## Result and error handling, confirmed here
 
 These match `webmcpable`'s published measurements and this project relies on all

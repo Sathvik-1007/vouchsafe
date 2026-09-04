@@ -229,6 +229,12 @@ discoverable, which is why the vault is embedded rather than linked.
 events in milliseconds; without debouncing the intermediate passes try to register
 names that are already taken.
 
+**A form with `toolname` becomes a tool, and Chrome writes its schema.** We
+supplied no schema for the file editor; Chrome read the fields and produced one,
+turning a `<select>` into an enumeration by itself. Leaving off
+`toolautosubmit` then parks the agent's call until a person presses Save, which
+is a human-in-the-loop gate the imperative API has no way to express.
+
 **`provideContext` does not exist.** It is in the explainer and not in the
 browser. `document.modelContext` exposes exactly `registerTool`, `getTools`,
 `executeTool` and `ontoolchange`.

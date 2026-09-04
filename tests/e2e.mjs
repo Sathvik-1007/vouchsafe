@@ -375,6 +375,19 @@ async function main() {
   const browser = await Browser.launch();
   console.log('  ready\n');
 
+  /**
+   * Is this the name of a question the vault answers?
+   *
+   * The suite used to ask whether a name lacked the `vault_` prefix, which was a
+   * prefix standing in for a definition and broke the moment a declarative form
+   * registered a tool of its own. A predicate is one of the questions in the
+   * catalogue, and nothing else.
+   */
+  const MANAGEMENT_PREFIX = 'vault_';
+  const DECLARATIVE_TOOLS = ['prepare_file_update'];
+  const isPredicate = (name) =>
+    !name.startsWith(MANAGEMENT_PREFIX) && !DECLARATIVE_TOOLS.includes(name);
+
   /** Tool names registered in a given origin's document. */
   const toolsIn = (origin) =>
     browser.evalIn(origin, `(async()=>(await document.modelContext.getTools()).map(t=>t.name).sort())()`);
@@ -448,7 +461,10 @@ async function main() {
     const tools = await toolsIn(VAULT_ORIGIN);
     ok(tools.includes('vault_list_grants'), 'vault_list_grants missing');
     ok(tools.includes('vault_probe_report'), 'vault_probe_report missing');
-    ok(tools.every((t) => t.startsWith('vault_')), 'a predicate leaked before any grant: ' + tools.join(','));
+    ok(
+      tools.filter(isPredicate).length === 0,
+      'a question was answerable before anything was allowed: ' + tools.filter(isPredicate).join(',')
+    );
   });
 
   await check('nothing is granted on a clean load', async () => {
@@ -469,10 +485,10 @@ async function main() {
     eq(await clickVault('#grant-typical'), 'ok', 'button present');
     const tools = await until(
       () => toolsIn(VAULT_ORIGIN),
-      (list) => list.filter((t) => !t.startsWith('vault_')).length === 9,
+      (list) => list.filter(isPredicate).length === 9,
       { what: 'nine predicates to register' }
     );
-    eq(tools.filter((t) => !t.startsWith('vault_')).length, 9, 'predicate count');
+    eq(tools.filter(isPredicate).length, 9, 'predicate count');
     eq(await textIn(VAULT_ORIGIN, '#bits-total'), '9', 'bits after granting nine');
   });
 
@@ -585,7 +601,7 @@ async function main() {
     eq(await clickVault('#grant-typical'), 'ok', 'set something up to destroy');
     const before = (await until(
       () => toolsIn(VAULT_ORIGIN),
-      (list) => list.filter((t) => !t.startsWith('vault_')).length === 9,
+      (list) => list.filter(isPredicate).length === 9,
       { what: 'nine permissions to be allowed' }
     )).length;
 
@@ -616,8 +632,8 @@ async function main() {
     eq(await clickVaultAndConfirm('#revoke-all'), 'ok', 'button');
     const tools = await until(
       () => toolsIn(VAULT_ORIGIN),
-      (list) => list.every((t) => t.startsWith('vault_')),
-      { what: 'every predicate to be withdrawn' }
+      (list) => list.filter(isPredicate).length === 0,
+      { what: 'every question to stop being answerable' }
     );
     eq(await textIn(VAULT_ORIGIN, '#bits-total'), '0', 'bits');
   });
@@ -889,6 +905,49 @@ async function main() {
       'an armed run stopped anyway: ' + (await textIn(HOST_ORIGIN, '#demo-caption'))
     );
   });
+
+  // ---- the declarative API -------------------------------------------------
+  console.log('\nthe declarative API');
+
+  await check('a form carrying toolname becomes a tool with no JavaScript', async () => {
+    await browser.goto(`${VAULT_ORIGIN}/?host=${encodeURIComponent(HOST_ORIGIN)}`, 3500);
+    const tool = await browser.evalIn(VAULT_ORIGIN, `(async () => {
+      const tools = await document.modelContext.getTools();
+      const found = tools.find(t => t.name === 'prepare_file_update');
+      return found ? { name: found.name, schema: String(found.inputSchema) } : null;
+    })()`);
+    ok(tool !== null, 'the declarative form did not register as a tool');
+    ok(/"type":"object"/.test(tool.schema), 'no object schema was derived: ' + tool.schema.slice(0, 120));
+    ok(
+      /annualIncomeGbp/.test(tool.schema),
+      'the schema does not describe the fields Chrome should have read: ' + tool.schema.slice(0, 200)
+    );
+    ok(
+      /creditBand[\s\S]*const/.test(tool.schema),
+      'the select was not turned into an enumeration, which is the part we wrote no code for'
+    );
+  });
+
+  await check('the declarative tool waits for a person, because it has no toolautosubmit', async () => {
+    // This is what the declarative path buys that the imperative one cannot: an
+    // imperative execute runs the moment it is called, whereas Chrome parks a
+    // declarative call until the submit button is pressed.
+    eq(
+      await browser.evalIn(VAULT_ORIGIN,
+        `document.getElementById('facts-form').hasAttribute('toolautosubmit')`),
+      false,
+      'toolautosubmit is set, so an agent could commit the file without anyone pressing anything'
+    );
+    ok(
+      await browser.evalIn(VAULT_ORIGIN,
+        `document.getElementById('save-facts').type === 'submit'`),
+      'there is no submit control for the parked call to wait on'
+    );
+  });
+
+  // Back to the letting agent. Leaving the browser on the vault cost every test
+  // after this one its execution context for the host origin.
+  await browser.goto(`${HOST_ORIGIN}/?vault=${encodeURIComponent(VAULT_ORIGIN)}`, 4500);
 
   // ---- the eval contract ---------------------------------------------------
   console.log('\nthe eval contract (evals.json)');

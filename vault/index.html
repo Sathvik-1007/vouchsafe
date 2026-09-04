@@ -122,10 +122,28 @@
       <p class="note" id="applicant-summary" style="margin:.5rem 0 0"></p>
     </div>
 
-    <div id="facts-form"></div>
-    <div class="controls" style="margin-top:1.25rem">
-      <button id="reset-facts" class="quiet">Restore the sample</button>
-    </div>
+    <!--
+      The Declarative API, and the only place in this project where it is the
+      right tool. Chrome turns a form carrying `toolname` into a WebMCP tool on
+      its own, deriving the parameters from the fields, so an assistant can fill
+      this in without a line of JavaScript being written for it.
+
+      There is deliberately no `toolautosubmit`. Without it Chrome parks the
+      agent's call until a human presses the button, which is exactly the
+      arrangement this whole product argues for: the assistant prepares the
+      change and the person commits it. The imperative tools elsewhere in the
+      vault cannot express that; this one gets it from the browser for free.
+    -->
+    <form id="facts-form"
+          toolname="prepare_file_update"
+          tooldescription="Fill in the applicant's details so they can review and save them. The person must press Save; this does not submit on its own.">
+      <div id="facts-fields"></div>
+      <div class="controls" style="margin-top:1.25rem">
+        <button type="submit" id="save-facts" class="primary">Save these details</button>
+        <button type="button" id="reset-facts" class="quiet">Restore the sample</button>
+        <span class="note" id="facts-status"></span>
+      </div>
+    </form>
   </section>
 
   <section class="section ledger-section">
