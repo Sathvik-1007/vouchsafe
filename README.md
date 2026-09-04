@@ -1,4 +1,4 @@
-# Bureau
+# Vouchsafe
 
 [![licence: MIT](https://img.shields.io/badge/licence-MIT-1a1c19)](LICENSE)
 [![tests: 117 passing](https://img.shields.io/badge/tests-117%20passing-4c2a85)](tests/)
@@ -28,7 +28,7 @@ your passport to six letting agents, who keep them forever. None of them wanted
 your salary. They wanted one bit: is annual income at least three times annual
 rent, yes or no.
 
-Bureau is that bit. Your facts live on your own origin and never leave your
+Vouchsafe is that bit. Your facts live on your own origin and never leave your
 browser. A letting agent borrows the *capability to ask*, gets back a word, and
 holds nothing.
 
@@ -68,7 +68,7 @@ to see a yes, a no and a not-yet without editing a field.
 
 ## What is actually new here
 
-Almost every WebMCP project is one site publishing tools about itself. Bureau is
+Almost every WebMCP project is one site publishing tools about itself. Vouchsafe is
 two origins exchanging them. The renter's vault registers tools with `exposedTo`,
 the letting agent discovers them with `getTools({fromOrigins})` and runs them with
 `executeTool`, and the browser is the only thing in between. There is no server

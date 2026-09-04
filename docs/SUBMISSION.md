@@ -6,7 +6,7 @@ Copy each block into the matching field.
 
 ## Project name
 
-Bureau
+Vouchsafe
 
 ## Elevator pitch (200 characters max)
 
@@ -113,7 +113,7 @@ Another scopes a single tool's lifetime to a review panel. A third approach
 injects the WebMCP API into a remote browser before the site's own scripts
 load, which is impressive and is not the standard.
 
-Bureau does the complete round trip on the standard: `exposedTo` on one side,
+Vouchsafe does the complete round trip on the standard: `exposedTo` on one side,
 `getTools({fromOrigins})` on the other, local re-registration as `applicant_*`
 proxies so an agent can actually see them, and `toolchange` teardown when the
 permission is withdrawn. As far as we can find, nobody else republishes

@@ -30,7 +30,7 @@ vault panel are both readable. Close other tabs. Hide bookmarks bar.
 
 ## 0:18 - 0:30  The setup
 
-> "This is Bureau. Two separate origins. On the left, a letting agent. On the
+> "This is Vouchsafe. Two separate origins. On the left, a letting agent. On the
 > right, in that frame, your own vault, on your own domain, holding your facts
 > in your own browser."
 

@@ -372,7 +372,7 @@ function notEq(actual, unexpected, what) {
 async function main() {
   // Announced before anything slow happens. A suite that prints nothing for its
   // first thirty seconds is indistinguishable from one that has hung.
-  console.log('\nBureau end-to-end');
+  console.log('\nVouchsafe end-to-end');
   const vaultServer = await serve('vault');
   const hostServer = await serve('host');
   VAULT_ORIGIN = vaultServer.origin;
