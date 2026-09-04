@@ -2,11 +2,13 @@
 
 **The letting agent gets an answer, not your life.**
 
-- **Try it:** <https://bureau-lettings.vercel.app>
-- **Check it yourself:** <https://bureau-lettings.vercel.app/proof.html> reads the
-  browser's own tool registry, live, on both origins
-- **Video:** VIDEO_URL
-- **Tool contract:** [TOOLS.md](TOOLS.md) &middot; **Licence:** MIT &middot; 115 tests, no runtime dependencies
+Try it at <https://bureau-lettings.vercel.app>. If you would rather not take any
+of this on trust, <https://bureau-lettings.vercel.app/proof.html> reads the
+browser's own tool registry, live, on both origins, and lets you watch a
+permission stop existing.
+
+Video: VIDEO_URL. The tool contract is in [TOOLS.md](TOOLS.md). MIT licensed,
+115 tests, and no runtime dependencies at all.
 
 To rent a flat in Britain you upload your payslips, your bank statements and
 your passport to six letting agents, who keep them forever. None of them wanted
@@ -125,7 +127,9 @@ secure contexts, so the full cross-origin flow works locally.
 
 **31 tools across two origins**, and which ones exist depends on what you granted.
 
-### The vault, `vault/lib/predicates.js` — 13 questions it will answer
+### The vault: 13 questions it will answer
+
+In `vault/lib/predicates.js`.
 
 Each is exposed only to the origins you name, each returns a word, each is priced.
 
@@ -148,7 +152,9 @@ Each is exposed only to the origins you name, each returns a word, each is price
 The last two exist so the meter has something to measure against. No listing asks
 for them, and a test asserts that.
 
-### The vault, `vault/lib/registry.js` — 12 tools only *you* can reach
+### The vault: 12 tools only you can reach
+
+In `vault/lib/registry.js`.
 
 Registered with no `exposedTo`, so they are same-origin and a letting agent cannot
 touch them however many predicates it holds. This is what lets you say *"revoke
@@ -158,7 +164,7 @@ everything from Marlow and Reed"* to your own agent:
 `vault_explain_permission`, `vault_probe_report`, `vault_read_ledger`,
 `vault_update_fact`, `vault_known_origins`.
 
-### The letting agent — 6 of its own, plus one proxy per permission
+### The letting agent: 6 of its own, plus one proxy per permission
 
 `list_listings`, `get_listing`, `check_eligibility`, `missing_permissions`,
 `submit_application`, `what_this_site_knows`.
@@ -339,8 +345,8 @@ by the page around it and needs the controls immediately.
 ## Layout
 
 ```
-vault/    the renter's origin — facts, predicates, grants, ledger, tool registry
-host/     the letting agent's origin — listings, federation, assessment, graph
+vault/    the renter's origin: facts, predicates, grants, ledger, tool registry
+host/     the letting agent's origin: listings, federation, assessment, graph
 tools/    serve both origins; keep the origin map in sync between them
 tests/    unit tests
 docs/     architecture, and what Chrome actually does

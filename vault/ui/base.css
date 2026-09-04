@@ -1039,7 +1039,10 @@ hr.rule { border: 0; border-top: 1px solid var(--rule-soft); margin: 2rem 0; }
 
 .announcer {
   position: fixed;
-  top: max(0.75rem, env(safe-area-inset-top));
+  /* Below the masthead, not over it. Centred at the top of the viewport the
+     banner sat straight across the wordmark, and a walkthrough that covers the
+     name of the thing it is explaining is not a good first impression. */
+  top: calc(4.75rem + env(safe-area-inset-top));
   left: 50%;
   transform: translateX(-50%);
   z-index: 70;
@@ -1123,7 +1126,8 @@ hr.rule { border: 0; border-top: 1px solid var(--rule-soft); margin: 2rem 0; }
 .announcer-close:focus-visible { outline: 2.5px solid var(--stamp); outline-offset: 1px; }
 
 @media (max-width: 34rem) {
-  .announcer { padding: 0.7rem 0.6rem 0.75rem 0.8rem; }
+  /* The masthead stacks on a phone, so the banner needs more room above it. */
+  .announcer { top: calc(6.5rem + env(safe-area-inset-top)); padding: 0.7rem 0.6rem 0.75rem 0.8rem; }
   .announcer-line { font-size: var(--t-base); }
   .announcer-output { max-height: 7rem; }
 }
