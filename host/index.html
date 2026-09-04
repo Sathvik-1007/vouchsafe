@@ -1,112 +1,110 @@
 <!doctype html>
-<html lang="en">
+<html lang="en-GB">
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>Marlow &amp; Reed Lettings</title>
-<meta name="description" content="A letting agent that never receives your documents. It asks your vault yes-or-no questions over WebMCP cross-origin tool federation and gets one bit back.">
-<link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 16 16'><text y='13' font-size='13'>&#127968;</text></svg>">
+<title>Marlow &amp; Reed — letting without the paperwork</title>
+<meta name="description" content="We assess your application without ever receiving your payslips, bank statements or ID. We ask your file a question and it answers yes or no.">
+<link rel="preload" href="./ui/fraunces.woff2" as="font" type="font/woff2" crossorigin>
+<link rel="preload" href="./ui/publicsans.woff2" as="font" type="font/woff2" crossorigin>
 <link rel="stylesheet" href="./ui/base.css">
 </head>
 <body>
-<div class="wrap">
+<main class="sheet">
 
   <header class="masthead">
     <div>
-      <h1 class="brand">Marlow &amp; Reed <span>/ lettings</span></h1>
-      <p class="thesis">We assess your application without ever receiving your payslips,
-      your bank statements or your ID. We ask your vault a question. It answers yes or no.</p>
+      <h1 class="wordmark">Marlow &amp; Reed <span>lettings</span></h1>
+      <p class="standfirst">We will never ask you for a payslip, a bank statement or
+        your passport. We ask your file a question. It answers yes or no.</p>
     </div>
-    <div style="text-align:right">
-      <div class="pill" id="mcp-status">checking…</div>
-      <div class="note" id="origin-label" style="margin-top:6px"></div>
+    <div class="meta">
+      <span class="tag" id="mcp-status">checking</span>
+      <code id="origin-label"></code>
     </div>
   </header>
 
-  <div id="banner-slot"></div>
+  <div id="notice-slot" aria-live="polite"></div>
 
-  <div id="demo-stage" hidden>
-    <div class="panel" style="border-color:var(--link)">
-      <h2 style="color:var(--link)">Guided demo <em id="demo-progress"></em></h2>
-      <div class="panel-body">
-        <p id="demo-caption" style="font-size:17px;line-height:1.4;margin:0 0 6px"></p>
-        <p id="demo-detail" class="note" style="margin:0"></p>
-        <pre id="demo-output" style="font-family:var(--mono);font-size:11.5px;color:var(--ink-dim);
-             background:#0e1216;border:1px solid var(--line);border-radius:6px;padding:10px;
-             margin:12px 0 0;white-space:pre-wrap;max-height:190px;overflow:auto" hidden></pre>
+  <section class="section" style="margin-top:2rem">
+    <div style="display:flex;gap:1rem;align-items:baseline;justify-content:space-between;flex-wrap:wrap">
+      <div>
+        <h2 style="margin-bottom:.2rem">What we can ask you</h2>
+        <p class="lede" style="margin-bottom:0" id="graph-caption">Nothing yet.</p>
+      </div>
+      <div class="controls">
+        <button id="play-demo" class="primary">Watch how it works</button>
       </div>
     </div>
-  </div>
 
-  <p style="margin:-6px 0 18px">
-    <button id="play-demo" class="primary">Play the guided demo</button>
-    <span class="note" id="demo-hint" style="margin-left:10px">
-      Runs the real thing against both origins. Arm the switch in the vault panel first.
-    </span>
-  </p>
+    <svg id="graph" viewBox="0 0 1200 300" preserveAspectRatio="xMidYMid meet"
+         style="display:block;width:100%;height:auto;margin-top:1.25rem" role="img"
+         aria-label="Which questions this agency may currently ask the applicant's file"></svg>
 
-  <section class="panel">
-    <h2>Capability graph <em id="graph-caption">nothing borrowed</em></h2>
-    <div class="panel-body" style="padding:0">
-      <svg id="graph" viewBox="0 0 1200 300" preserveAspectRatio="xMidYMid meet"
-           style="display:block;width:100%;height:auto;background:#0e1216" role="img"
-           aria-label="Diagram of which capabilities this site has borrowed from the applicant's vault"></svg>
-    </div>
-    <div class="panel-body" style="border-top:1px solid var(--line)">
-      <p class="note" style="margin:0">Each line is one permission the applicant granted. It is a
-      live <code>document.modelContext</code> registration, not a record of a past transfer.
-      Revoke it in the vault and the line disappears from here within a frame.</p>
+    <p class="note" style="max-width:70ch">Each line is one question you allowed. It is live,
+      not a record of something already sent. Withdraw it and the line goes.</p>
+  </section>
+
+  <section id="demo-stage" hidden class="section">
+    <div class="sunk">
+      <p class="note" id="demo-progress" style="margin:0 0 .4rem"></p>
+      <p id="demo-caption" style="font-family:var(--serif);font-variation-settings:'opsz' 40;
+         font-size:var(--t-md);line-height:1.3;margin:0"></p>
+      <p id="demo-detail" class="note" style="margin:.35rem 0 0"></p>
+      <pre id="demo-output" hidden style="font-family:var(--mono);font-size:var(--t-xs);
+           color:var(--ink-mid);background:#fff;border:1px solid var(--rule-soft);
+           padding:.8rem;margin:.9rem 0 0;white-space:pre-wrap;max-height:12rem;overflow:auto"></pre>
     </div>
   </section>
 
-  <div class="cols">
+  <div class="split section">
     <div>
-      <section class="panel">
-        <h2>Properties</h2>
+      <section>
+        <h2>Available now</h2>
+        <p class="lede">Three properties in south Manchester.</p>
         <div id="listings"></div>
       </section>
 
-      <section class="panel">
-        <h2>Assessment <em id="assess-caption"></em></h2>
-        <div id="assessment" class="panel-body">
-          <p class="note" style="margin:0">Choose a property and run the checks.</p>
-        </div>
+      <section style="margin-top:2.5rem">
+        <h2>Your application</h2>
+        <p class="lede" id="assess-lede">Pick a property and we will check whether it works.</p>
+        <div id="assessment"></div>
       </section>
     </div>
 
-    <div>
-      <section class="panel">
-        <h2>The applicant's vault <em>a different origin</em></h2>
-        <div class="panel-body" style="padding:0">
-          <iframe id="vault-frame" allow="tools" title="The applicant's vault, on its own origin"
-                  style="width:100%;height:460px;border:0;display:block;background:#0b0d10"></iframe>
-        </div>
-        <div class="panel-body" style="border-top:1px solid var(--line)">
-          <p class="note" style="margin:0 0 8px">This frame is a separate origin with its own
-          storage. This page cannot read inside it. The only thing that crosses the boundary is a
-          tool call, and only for permissions the applicant granted.</p>
-          <button id="open-vault">Open the vault in its own tab</button>
+    <aside>
+      <section>
+        <h2 style="font-family:var(--serif);font-size:var(--t-md);font-weight:600;margin:0 0 .35rem">
+          Your file
+        </h2>
+        <p class="note" style="margin:0 0 .9rem">A different website, with its own storage.
+          We cannot read inside this panel. We can only ask it things you have allowed.</p>
+        <iframe id="vault-frame" allow="tools" title="Your file, on its own website"
+                style="width:100%;height:34rem;border:1px solid var(--rule);background:var(--sheet)"></iframe>
+        <div class="controls" style="margin-top:.75rem">
+          <button id="open-vault" class="quiet">Open your file in its own tab</button>
         </div>
       </section>
 
-      <section class="panel">
-        <h2>Tools this site publishes <em id="tool-count"></em></h2>
-        <ul class="reset" id="tool-list" style="font-family:var(--mono);font-size:11.5px"></ul>
+      <section style="margin-top:2rem">
+        <h2 style="font-family:var(--serif);font-size:var(--t-md);font-weight:600;margin:0 0 .35rem">
+          What we hold about you
+        </h2>
+        <p class="figure" id="held-figure">Nothing</p>
+        <p class="figure-label">We write no applicant data to storage of any kind.
+          Reload this page and the assessment is gone.</p>
       </section>
 
-      <section class="panel">
-        <h2>What we hold about you</h2>
-        <div class="panel-body">
-          <p style="margin:0 0 8px"><strong>Nothing.</strong> This origin writes no applicant data
-          to storage of any kind. Reload the page and the assessment is gone.</p>
-          <p class="note" style="margin:0">Every answer above arrived as a single word from an
-          origin we do not control and cannot read.</p>
-        </div>
+      <section style="margin-top:2rem">
+        <h2 style="font-family:var(--serif);font-size:var(--t-md);font-weight:600;margin:0 0 .35rem">
+          Our tools <span class="note" id="tool-count"></span>
+        </h2>
+        <ul class="plain" id="tool-list"></ul>
       </section>
-    </div>
+    </aside>
   </div>
-</div>
 
+</main>
 <script type="module" src="./ui/app.js"></script>
 </body>
 </html>

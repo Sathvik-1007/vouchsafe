@@ -1,106 +1,113 @@
 <!doctype html>
-<html lang="en">
+<html lang="en-GB">
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>Bureau — your vault</title>
-<meta name="description" content="A personal fact vault that answers questions about you without handing over the answers' underlying data. Built on WebMCP cross-origin tool federation.">
-<link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 16 16'><text y='13' font-size='13'>&#128274;</text></svg>">
+<title>Bureau — your reference, redacted</title>
+<meta name="description" content="Your facts stay in your browser. A letting agent asks a question and gets one word back. Built on WebMCP cross-origin tool federation.">
+<link rel="preload" href="./ui/fraunces.woff2" as="font" type="font/woff2" crossorigin>
+<link rel="preload" href="./ui/publicsans.woff2" as="font" type="font/woff2" crossorigin>
 <link rel="stylesheet" href="./ui/base.css">
 </head>
 <body>
-<div class="wrap">
+<main class="sheet">
 
   <header class="masthead">
     <div>
-      <h1 class="brand">Bureau <span>/ vault</span></h1>
-      <p class="thesis">Your facts live here, in this browser, on your origin. A letting agent
-      never receives them. It asks a question and gets one bit back.</p>
+      <h1 class="wordmark">Bureau <span>your file</span></h1>
+      <p class="standfirst">Everything below stays in this browser. A letting agent
+        never receives it. They ask a question, and get back one word.</p>
     </div>
-    <div style="text-align:right">
-      <div class="pill" id="mcp-status">checking…</div>
-      <div class="note" id="origin-label" style="margin-top:6px"></div>
+    <div class="meta">
+      <span class="tag" id="mcp-status">checking</span>
+      <code id="origin-label"></code>
     </div>
   </header>
 
-  <div id="banner-slot"></div>
+  <div id="notice-slot" aria-live="polite"></div>
 
-  <div class="cols">
+  <!-- The hero: a letting reference with everything blacked out but the answer. -->
+  <section class="section" style="margin-top:2.25rem">
+    <h2>What they asked, and what they got</h2>
+    <p class="lede">On the left is what a letting agency would normally hold about you.
+      On the right is everything they actually receive.</p>
+    <div class="reference" id="reference"></div>
+    <p class="note" id="reference-empty" style="margin-top:1rem"></p>
+  </section>
+
+  <div class="split section">
     <div>
-      <section class="panel">
-        <h2>Permissions <em id="grant-summary"></em></h2>
-        <div class="panel-body" style="padding-bottom:6px">
-          <label class="note" for="origin-picker" style="display:block;margin-bottom:6px">
-            Granting to
-          </label>
-          <select id="origin-picker"></select>
-          <div style="display:flex;gap:8px;margin-top:10px;flex-wrap:wrap">
-            <button id="grant-typical" class="grant">Grant the usual nine</button>
-            <button id="revoke-all" class="revoke">Revoke everything</button>
-          </div>
+      <section>
+        <h2 style="font-family:var(--serif);font-size:var(--t-md);font-weight:600;margin:0 0 .35rem">
+          Who may ask
+        </h2>
+        <p class="note" style="margin:0 0 1rem">Turn a question on and they may ask it.
+          Turn it off and the ability disappears from their side immediately.</p>
+
+        <label class="field-label" for="origin-picker">Letting agent</label>
+        <select id="origin-picker"></select>
+
+        <div class="controls" style="margin-top:.9rem">
+          <button id="grant-typical" class="grant">Allow the standard nine</button>
+          <button id="revoke-all" class="revoke">Withdraw everything</button>
         </div>
-        <div class="panel-body" id="demo-slot" hidden style="border-top:1px solid var(--line);background:#0e1216"></div>
-        <div id="predicate-list"></div>
+
+        <div class="sunk" id="demo-slot" hidden style="margin-top:1rem"></div>
       </section>
 
-      <section class="panel">
-        <h2>Your facts <em>never transmitted</em></h2>
-        <div class="panel-body">
-          <p class="note" style="margin-top:0">Synthetic sample data. Edit anything; the answers
-          above change with it. Nothing here leaves this origin, and this page ships no
-          <code>fetch</code> call at all.</p>
-          <div id="facts-form" style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-top:12px"></div>
-          <button id="reset-facts" style="margin-top:12px">Restore sample data</button>
-        </div>
-      </section>
+      <hr class="rule">
+      <div id="permission-list"></div>
     </div>
 
-    <div>
-      <section class="panel">
-        <h2>Disclosure</h2>
-        <div class="panel-body">
-          <div class="big" id="bits-total">0.0</div>
-          <p class="note" style="margin:2px 0 10px">bits disclosed to the selected origin</p>
-          <div class="meter"><i id="bits-bar" style="width:0%"></i></div>
-          <p class="note" id="bits-explain"></p>
+    <aside>
+      <section>
+        <p class="figure stamped" id="bits-total">0</p>
+        <p class="figure-label" id="bits-label">bits about you handed over</p>
+        <div class="bar"><i id="bits-bar" style="width:0%"></i></div>
+        <p class="note" id="bits-explain" style="margin-top:.7rem"></p>
+      </section>
+
+      <div id="counterfactual" style="margin-top:2rem"></div>
+
+      <section id="probe-panel" hidden style="margin-top:2rem">
+        <div class="notice bad">
+          <strong>Someone is guessing.</strong>
+          <div id="probe-report" style="margin-top:.5rem"></div>
         </div>
       </section>
 
-      <section class="panel" id="probe-panel" hidden>
-        <h2 style="color:var(--warn)">Someone is guessing</h2>
-        <div class="panel-body">
-          <div id="probe-report"></div>
-        </div>
+      <section style="margin-top:2rem">
+        <h2 style="font-family:var(--serif);font-size:var(--t-md);font-weight:600;margin:0 0 .35rem">
+          Live now
+        </h2>
+        <p class="note" style="margin:0 0 .75rem">Questions currently answerable,
+          registered on <code style="font-family:var(--mono);font-size:var(--t-xs)">document.modelContext</code>.</p>
+        <ul class="plain" id="live-tools"></ul>
       </section>
-
-      <section class="panel">
-        <h2>What you did not hand over</h2>
-        <div class="panel-body">
-          <div id="counterfactual"></div>
-        </div>
-      </section>
-
-      <section class="panel">
-        <h2>Live tool surface <em id="tool-count"></em></h2>
-        <div class="panel-body" style="padding-bottom:8px">
-          <p class="note" style="margin:0 0 8px">Registered on <code>document.modelContext</code>
-          right now. Revoking a permission aborts its registration, which fires
-          <code>toolchange</code> in the letting agent's page.</p>
-        </div>
-        <ul class="reset" id="live-tools" style="font-family:var(--mono);font-size:11.5px"></ul>
-      </section>
-
-      <section class="panel">
-        <h2>Ledger <em>your copy, held locally</em></h2>
-        <ul class="ledger reset" id="ledger"></ul>
-        <div class="panel-body" style="border-top:1px solid var(--line)">
-          <button id="clear-ledger">Clear ledger</button>
-        </div>
-      </section>
-    </div>
+    </aside>
   </div>
-</div>
 
+  <section class="section">
+    <h2>Your file</h2>
+    <p class="lede">Sample details, so there is something to answer about. Change anything
+      and the answers change with it. None of it is transmitted; this page contains no
+      code that could send it anywhere.</p>
+    <div id="facts-form"></div>
+    <div class="controls" style="margin-top:1.25rem">
+      <button id="reset-facts" class="quiet">Restore the sample</button>
+    </div>
+  </section>
+
+  <section class="section">
+    <h2>Every question anyone asked</h2>
+    <p class="lede">Your own copy, kept here. Nobody else has it.</p>
+    <ul class="ledger" id="ledger"></ul>
+    <div class="controls" style="margin-top:1rem">
+      <button id="clear-ledger" class="quiet">Clear this log</button>
+    </div>
+  </section>
+
+</main>
 <script type="module" src="./ui/app.js"></script>
 </body>
 </html>

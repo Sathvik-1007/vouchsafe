@@ -33,15 +33,15 @@ const $ = (id) => document.getElementById(id);
 function renderStatus() {
   const pill = $('mcp-status');
   const available = webmcpAvailable();
-  pill.textContent = available ? 'webmcp live' : 'webmcp unavailable';
-  pill.className = 'pill ' + (available ? 'ok' : 'no');
+  pill.textContent = available ? 'connected' : 'no agent support';
+  pill.className = 'tag ' + (available ? 'live' : 'off');
   $('origin-label').textContent = location.origin;
 
   if (available) return;
-  $('banner-slot').innerHTML =
-    '<div class="banner bad"><strong>This browser has no WebMCP.</strong> ' +
-    'The site renders, but no capability can be borrowed and no check can run. ' +
-    'Open in Chrome 149 or later, or enable <code>chrome://flags/#enable-webmcp-testing</code>.</div>';
+  $('notice-slot').innerHTML =
+    '<div class="notice"><strong>This browser cannot talk to agents.</strong> ' +
+    'The site works, but no question can be asked and no check can run. Open in Chrome 149 ' +
+    'or later, or switch on <code style="font-family:var(--mono)">chrome://flags/#enable-webmcp-testing</code>.</div>';
 }
 
 function renderGraph() {
@@ -53,23 +53,25 @@ function renderGraph() {
   });
   const n = federatedHandles().length;
   $('graph-caption').textContent =
-    n === 0 ? 'nothing borrowed' : n + ' capabilit' + (n === 1 ? 'y' : 'ies') + ' borrowed';
+    n === 0
+      ? 'Nothing yet. Allow a question in your file and it appears here.'
+      : 'You have allowed us ' + n + ' question' + (n === 1 ? '' : 's') + '. That is all we can ask.';
 }
 
 function renderListings() {
   $('listings').innerHTML = LISTINGS.map((l) => {
     const active = l.id === activeListing;
     return (
-      '<div class="cap' + (active ? ' is-live' : '') + '">' +
+      '<div class="perm' + (active ? ' is-live' : '') + '">' +
       '<div>' +
-      '<div class="cap-name">' + esc(l.title) + '</div>' +
-      '<div class="cap-title">' + esc(l.area) + ' · ' + gbp(l.monthlyRentGbp) + '/month · ' +
-      l.bedrooms + ' bed · deposit ' + gbp(depositFor(l.monthlyRentGbp)) + '</div>' +
-      '<div class="cap-reveals">' + (l.allowsPets ? 'Pets welcome' : 'No pets') +
-      ' · up to ' + l.maxOccupants + ' occupants · available ' + esc(l.availableFromIso) + '</div>' +
+      '<p class="perm-title">' + esc(l.title) + '</p>' +
+      '<p class="perm-reveals">' + esc(l.area) + ' &middot; ' + gbp(l.monthlyRentGbp) +
+      ' a month &middot; ' + l.bedrooms + ' bed &middot; deposit ' + gbp(depositFor(l.monthlyRentGbp)) + '</p>' +
+      '<p class="perm-reveals">' + (l.allowsPets ? 'Pets welcome' : 'No pets') +
+      ' &middot; up to ' + l.maxOccupants + ' people &middot; free from ' + esc(l.availableFromIso) + '</p>' +
       '</div>' +
-      '<button class="' + (active ? 'primary' : '') + '" data-listing="' + esc(l.id) + '">' +
-      (active ? 'run checks' : 'select') + '</button>' +
+      '<button class="' + (active ? 'primary' : 'quiet') + '" data-listing="' + esc(l.id) + '">' +
+      (active ? 'Check this one' : 'Choose') + '</button>' +
       '</div>'
     );
   }).join('');
@@ -79,66 +81,76 @@ function renderAssessment() {
   const listing = findListing(activeListing);
   const checks = resultsFor(activeListing);
   const box = $('assessment');
+  const lede = $('assess-lede');
 
   if (assessing) {
-    $('assess-caption').textContent = 'running';
-    box.innerHTML = '<p class="note" style="margin:0">Asking the vault, one question at a time…</p>';
+    lede.textContent = 'Asking your file, one question at a time.';
+    box.innerHTML = '';
     return;
   }
 
   if (checks.length === 0) {
-    $('assess-caption').textContent = '';
+    lede.textContent = 'Nothing checked yet for ' + listing.title + '.';
     box.innerHTML =
-      '<p class="note" style="margin:0">No checks have run for ' + esc(listing.title) + '. ' +
-      'Press <em>run checks</em>, or ask your agent to call <code>check_eligibility</code>.</p>';
+      '<p class="note">Press <em>Check this one</em>, or ask your assistant to run the checks.</p>';
     return;
   }
 
   const summary = summarise(checks);
-  $('assess-caption').textContent = summary.decision.replace('_', ' ');
+  lede.textContent =
+    summary.decision === 'eligible'
+      ? 'Everything we need came back yes.'
+      : summary.decision === 'not_eligible'
+        ? 'One of the requirements came back no.'
+        : 'We are still waiting on permission for something.';
 
   const rows = checks
     .map((c) => {
-      const cls = c.status === 'pass' ? 'ok' : c.status === 'fail' ? 'no' : 'wait';
       const word =
-        c.status === 'pass' ? 'yes' : c.status === 'fail' ? 'no' : c.status === 'blocked' ? 'not granted' : 'error';
+        c.status === 'pass' ? 'yes' : c.status === 'fail' ? 'no'
+          : c.status === 'blocked' ? 'not allowed' : 'error';
+      const cls = c.status === 'pass' ? '' : c.status === 'fail' ? 'no' : 'pending';
       return (
-        '<li style="display:grid;grid-template-columns:1fr auto;gap:10px;align-items:center;' +
-        'padding:9px 0;border-bottom:1px solid var(--line)">' +
-        '<div><div style="font-size:13px">' + esc(c.label) + (c.mandatory ? '' : ' <span class="note">(optional)</span>') + '</div>' +
-        '<div class="cap-reveals" style="font-family:var(--mono)">' + esc(PROXY_PREFIX + c.predicate) + ' → ' + esc(c.detail) + '</div></div>' +
-        '<span class="pill ' + cls + '">' + word + '</span></li>'
+        '<div class="reference-row">' +
+        '<div>' +
+        '<p class="reference-q" style="font-size:var(--t-base)">' + esc(c.label) + '</p>' +
+        '<p class="perm-reveals" style="margin-top:.2rem">' + esc(c.detail) + '</p>' +
+        '</div>' +
+        '<span class="stamp ' + cls + ' is-fresh">' + word + '</span>' +
+        '</div>'
       );
     })
     .join('');
 
-  const banner =
+  const verdict =
     summary.decision === 'eligible'
-      ? '<div class="banner" style="border-color:var(--live);background:var(--live-dim);color:#c8f0d6">' +
-        '<strong>Eligible.</strong> ' + esc(summary.reason) +
-        ' We received ' + checks.length + ' yes-or-no answers and not one document.</div>'
-      : '<div class="banner' + (summary.decision === 'not_eligible' ? ' bad' : '') + '"><strong>' +
-        (summary.decision === 'not_eligible' ? 'Not eligible.' : 'Incomplete.') + '</strong> ' +
-        esc(summary.reason) + '</div>';
+      ? '<div class="notice good"><strong>You qualify.</strong> We asked ' + checks.length +
+        ' questions and received ' + checks.length + ' one-word answers. No documents changed hands.</div>'
+      : summary.decision === 'not_eligible'
+        ? '<div class="notice bad"><strong>Not this one.</strong> ' + esc(summary.reason) + '</div>'
+        : '<div class="notice"><strong>Not finished.</strong> ' + esc(summary.reason) + '</div>';
 
-  box.innerHTML = banner + '<ul class="reset">' + rows + '</ul>';
+  box.innerHTML = verdict + '<div class="reference">' + rows + '</div>';
 }
 
 function renderTools() {
   const own = hostToolNames();
   const proxied = federationState().proxied;
-  $('tool-count').textContent = own.length + proxied.length + ' published';
+  $('tool-count').textContent = own.length + proxied.length + ' in total';
 
   const row = (name, kind, cls) =>
-    '<li style="padding:6px 14px;border-bottom:1px solid var(--line);display:flex;' +
-    'justify-content:space-between;gap:10px"><span>' + esc(name) + '</span>' +
-    '<span class="pill ' + cls + '">' + kind + '</span></li>';
+    '<li style="display:flex;justify-content:space-between;gap:.75rem;padding:.35rem 0;' +
+    'border-bottom:1px solid var(--rule-soft)">' +
+    '<span class="perm-name">' + esc(name) + '</span>' +
+    '<span class="tag' + cls + '">' + kind + '</span></li>';
 
   $('tool-list').innerHTML =
     own.map((n) => row(n, 'ours', '')).join('') +
     (proxied.length
-      ? proxied.map((n) => row(n, 'borrowed', 'ok')).join('')
-      : '<li style="padding:8px 14px;color:var(--ink-faint)">no borrowed capabilities</li>');
+      ? proxied.map((n) => row(n, 'borrowed', ' live')).join('')
+      : '<li class="note" style="padding:.35rem 0">Nothing borrowed from you.</li>');
+
+  $('held-figure').textContent = 'Nothing';
 }
 
 function renderAll() {
@@ -159,7 +171,7 @@ async function runChecks() {
   try {
     await assess(activeListing, federatedHandles());
   } catch (err) {
-    $('banner-slot').innerHTML = '<div class="banner bad">' + esc(errText(err)) + '</div>';
+    $('notice-slot').innerHTML = '<div class="notice bad">' + esc(errText(err)) + '</div>';
   } finally {
     assessing = false;
     renderAssessment();
@@ -178,14 +190,14 @@ function renderDemo(state) {
   if (state === null) {
     stage.hidden = true;
     button.disabled = false;
-    button.textContent = 'Play the guided demo';
+    button.textContent = 'Watch how it works';
     return;
   }
 
   stage.hidden = false;
   button.disabled = true;
-  button.textContent = 'Running…';
-  $('demo-progress').textContent = state.index + ' of ' + state.total;
+  button.textContent = 'Playing';
+  $('demo-progress').textContent = 'Step ' + state.index + ' of ' + state.total;
   $('demo-caption').textContent = state.caption;
   $('demo-detail').textContent = state.detail;
 
@@ -216,7 +228,7 @@ function wireEvents() {
     if (demoRunning()) return;
     runDemo(renderDemo).catch((err) => {
       renderDemo(null);
-      $('banner-slot').innerHTML = '<div class="banner bad">Demo failed: ' + esc(errText(err)) + '</div>';
+      $('notice-slot').innerHTML = '<div class="notice bad">The walkthrough stopped: ' + esc(errText(err)) + '</div>';
     });
   });
 }
@@ -261,6 +273,6 @@ async function boot() {
 
 boot().catch((err) => {
   console.error('[host] boot failed:', err);
-  document.getElementById('banner-slot').innerHTML =
-    '<div class="banner bad">This site failed to start: ' + esc(String(err)) + '</div>';
+  document.getElementById('notice-slot').innerHTML =
+    '<div class="notice bad"><strong>This site could not start.</strong> ' + esc(String(err)) + '</div>';
 });

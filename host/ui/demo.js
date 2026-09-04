@@ -80,45 +80,45 @@ function askVault(action, predicate) {
 function steps() {
   return [
     {
-      say: 'To rent a flat you upload your payslips, bank statements and passport.',
-      detail: 'Six letting agents. Six copies of your life. Kept forever.',
+      say: 'Renting normally means uploading your payslips, your bank statements and your passport.',
+      detail: 'To six agencies. Six copies of your life, kept indefinitely.',
       wait: QUICK_MS,
     },
     {
-      say: 'None of them wanted your salary. They wanted one bit.',
-      detail: 'Is annual income at least three times annual rent, yes or no.',
+      say: 'None of them wanted your salary. They wanted one answer.',
+      detail: 'Does your income cover three times the rent. Yes or no.',
       wait: QUICK_MS,
     },
     {
-      say: 'Right now this letting agent knows nothing about you.',
-      detail: 'Watch the tool count.',
+      say: 'Right now this agency knows nothing about you.',
+      detail: 'Watch the diagram.',
       act: async () => askVault('revoke-all'),
     },
     {
-      say: 'You grant nine permissions in your own vault, on your own origin.',
-      detail: 'Each one is a question it may ask. Not a document it may keep.',
+      say: 'You allow nine questions, in your own file, on your own website.',
+      detail: 'Each is a question they may ask. Not a document they may keep.',
       act: async () => askVault('grant-typical'),
     },
     {
-      say: 'The letting agent just borrowed nine capabilities across the origin boundary.',
-      detail: 'exposedTo on their side, getTools({fromOrigins}) on this one.',
+      say: 'Nine questions just became answerable across the boundary between two websites.',
+      detail: 'Your file offered them. This site asked for them. No server in between.',
     },
     {
-      say: 'Now it runs the checks.',
-      detail: 'Nine cross-origin calls. Nine yes-or-no answers.',
+      say: 'Now the agency runs its checks.',
+      detail: 'Nine questions. Nine one-word answers.',
       act: async () => callOwnTool('check_eligibility', { listing_id: 'ml-114' }),
       wait: 3200,
     },
     {
-      say: 'Eligible. And this site still holds nothing.',
+      say: 'You qualify. And this site still holds nothing about you.',
       act: async () => callOwnTool('what_this_site_knows', {}),
     },
     {
-      say: 'Suppose the agent gets greedy and starts guessing your salary.',
-      detail: 'Each answer is one legitimate bit. The sequence is not.',
+      say: 'Now suppose the agency gets greedy and starts guessing your salary.',
+      detail: 'Every single answer is legitimate. The run of them is not.',
       act: async () => {
         const handle = federatedHandles().find((t) => String(t.name) === 'income_meets_multiple');
-        if (!handle) return 'income permission is not granted';
+        if (!handle) return 'that question is not allowed';
         const lines = [];
         for (const rent of [2000, 1500, 1300, 1200, 1175, 1160]) {
           const out = await document.modelContext.executeTool(
@@ -133,24 +133,24 @@ function steps() {
       wait: 4200,
     },
     {
-      say: 'The vault caught it and stopped answering.',
-      detail: 'Five thresholds allowed. The sixth refused, and you were told who did it.',
+      say: 'Your file noticed, and stopped answering.',
+      detail: 'Five numbers allowed, the sixth refused, and you were told who was asking.',
       wait: 3000,
     },
     {
-      say: 'Change your mind and the capability disappears from their hands.',
-      detail: 'Revoking aborts the registration. No server is asked to cooperate.',
+      say: 'Change your mind, and the question stops being answerable.',
+      detail: 'Nothing is asked to cooperate. It simply stops existing on their side.',
       act: async () => askVault('revoke', 'income_meets_multiple'),
       wait: 3000,
     },
     {
-      say: 'The tool is gone mid-conversation. The check cannot run any more.',
+      say: 'Gone, mid-conversation. That check can no longer run.',
       act: async () => callOwnTool('check_eligibility', { listing_id: 'ml-114' }),
       wait: 3400,
     },
     {
-      say: 'The letting agent gets an answer, not your life.',
-      detail: 'bureau-lettings.vercel.app',
+      say: 'The agency gets an answer, not your life.',
+      detail: 'Your file. Their question. One word back.',
       wait: 4000,
     },
   ];
