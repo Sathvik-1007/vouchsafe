@@ -77,7 +77,7 @@ export const PROBE_WINDOW_MS = 15 * 60 * 1000;
  *
  * @type {ReadonlyMap<string, (args: Record<string, unknown>) => number | null>}
  */
-export const THRESHOLD_READERS = new Map([
+const THRESHOLD_READERS = new Map([
   [
     'income_meets_multiple',
     // The bracket is on annual income, so both arguments fold into one number.

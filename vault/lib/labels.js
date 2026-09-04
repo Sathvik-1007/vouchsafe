@@ -21,7 +21,7 @@
  */
 
 /** @type {ReadonlyMap<string, FieldLabel>} */
-export const FIELD_LABELS = new Map([
+const FIELD_LABELS = new Map([
   ['legalName', { label: 'Full legal name', group: 'You', hint: 'As it appears on your ID.' }],
   ['annualIncomeGbp', { label: 'Income before tax', group: 'Money', unit: '£ a year' }],
   ['savingsGbp', { label: 'Savings you could put to a deposit', group: 'Money', unit: '£' }],

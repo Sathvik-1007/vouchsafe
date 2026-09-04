@@ -851,3 +851,177 @@ hr.rule { border: 0; border-top: 1px solid var(--rule-soft); margin: 2rem 0; }
 .tool-columns > li {
   break-inside: avoid;
 }
+
+/* ==========================================================================
+   Messages and decisions.
+
+   Two different jobs that are often given one shape. A message reports what
+   already happened and must never take space from the page or block anything.
+   A decision needs an answer, so it opens against the control that raised it,
+   where the thing being decided about is still visible.
+   ========================================================================== */
+
+.toasts {
+  position: fixed;
+  left: max(1rem, env(safe-area-inset-left));
+  bottom: max(1rem, env(safe-area-inset-bottom));
+  z-index: 60;
+  display: flex;
+  flex-direction: column-reverse;   /* newest nearest the corner */
+  gap: 0.55rem;
+  width: min(26rem, calc(100vw - 2rem));
+  /* The stack itself is not a target; only the messages in it are, so the page
+     underneath stays clickable everywhere the stack is merely empty space. */
+  pointer-events: none;
+}
+
+.toast {
+  pointer-events: auto;
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  gap: 0.5rem;
+  align-items: start;
+  padding: 0.7rem 0.7rem 0.75rem 0.85rem;
+  /*
+   * Paper, like everything else. An earlier version was a dark card, which read
+   * as somebody else's component dropped onto the page: the one dark surface in
+   * the design is the stage, and it earns that by carrying the argument. A
+   * message does not.
+   *
+   * The stamp rule on the left is the same device the permission rows use, so a
+   * confirmation is visibly the same family as the thing it confirms.
+   */
+  background: var(--sheet);
+  color: var(--ink);
+  border: 1px solid var(--rule);
+  border-left: 3px solid var(--stamp);
+  border-radius: 2px;
+  box-shadow: 0 8px 24px -12px rgba(26, 28, 25, 0.45), 0 1px 2px rgba(26, 28, 25, 0.12);
+  touch-action: pan-y;             /* the page keeps vertical scroll; we take sideways */
+  will-change: transform, opacity;
+  animation: toast-in 260ms cubic-bezier(0.2, 0, 0, 1) both;
+}
+
+.toast.is-dragging { transition: none; cursor: grabbing; }
+.toast:not(.is-dragging) { transition: transform 180ms ease, opacity 180ms ease; }
+
+.toast-bad { border-left-color: var(--refuse); background: var(--refuse-wash); }
+.toast-plain { border-left-color: var(--rule); }
+
+.toast-message {
+  margin: 0;
+  font-size: var(--t-sm);
+  line-height: 1.45;
+  font-weight: 500;
+}
+
+.toast-detail {
+  margin: 0.25rem 0 0;
+  font-size: var(--t-xs);
+  line-height: 1.45;
+  color: var(--ink-mid);
+}
+
+.toast-close {
+  background: transparent;
+  border: 0;
+  color: var(--ink-faint);
+  font-size: 1.15rem;
+  line-height: 1;
+  padding: 0.1rem 0.25rem;
+  cursor: pointer;
+  border-radius: 3px;
+  /* A 24px target, which is the floor for a pointer target, without making the
+     glyph itself large enough to shout. */
+  min-width: 1.6rem;
+  min-height: 1.6rem;
+}
+
+.toast-close:hover { color: var(--ink); background: var(--sheet-sunk); }
+.toast-close:focus-visible { outline: 2.5px solid var(--stamp); outline-offset: 1px; }
+
+@keyframes toast-in {
+  from { opacity: 0; transform: translateY(0.6rem) scale(0.98); }
+  to   { opacity: 1; transform: none; }
+}
+
+@keyframes toast-out {
+  to { opacity: 0; transform: translateX(-1.5rem) scale(0.97); }
+}
+
+.toast.is-leaving { animation: toast-out 170ms ease both; }
+
+@media (prefers-reduced-motion: reduce) {
+  .toast, .toast.is-leaving { animation: none; }
+  .toast:not(.is-dragging) { transition: none; }
+}
+
+/* On a phone the corner is where the thumb is, so the stack spans the width and
+   sits above the home indicator rather than hugging one edge. */
+@media (max-width: 34rem) {
+  .toasts {
+    left: 0.6rem;
+    right: 0.6rem;
+    width: auto;
+  }
+}
+
+/* ---- decisions ---------------------------------------------------------- */
+
+.confirm {
+  position: absolute;
+  z-index: 50;
+  right: 0;
+  top: calc(100% + 0.45rem);
+  width: min(20rem, calc(100vw - 2rem));
+  background: var(--sheet);
+  border: 1.5px solid var(--ink);
+  border-radius: 3px;
+  padding: 0.85rem 0.9rem 0.9rem;
+  box-shadow: 0 10px 28px -12px rgba(26, 28, 25, 0.5);
+  animation: confirm-in 150ms cubic-bezier(0.2, 0, 0, 1) both;
+}
+
+@keyframes confirm-in {
+  from { opacity: 0; transform: translateY(-0.3rem); }
+  to   { opacity: 1; transform: none; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .confirm { animation: none; }
+}
+
+.confirm-question {
+  margin: 0;
+  font-family: var(--serif);
+  font-variation-settings: 'opsz' 24;
+  font-size: var(--t-base);
+  font-weight: 600;
+  line-height: 1.25;
+}
+
+.confirm-detail {
+  margin: 0.35rem 0 0;
+  font-size: var(--t-sm);
+  color: var(--ink-mid);
+  line-height: 1.45;
+}
+
+.confirm-actions {
+  display: flex;
+  gap: 0.5rem;
+  margin-top: 0.8rem;
+  justify-content: flex-end;
+}
+
+/* Near the right edge of a phone the popover would run off; pin it instead. */
+@media (max-width: 34rem) {
+  .confirm {
+    position: fixed;
+    left: 0.6rem;
+    right: 0.6rem;
+    top: auto;
+    bottom: 0.6rem;
+    width: auto;
+  }
+}

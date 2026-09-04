@@ -18,8 +18,10 @@ done
 # document roots, and neither may fetch from the other. It was being copied by
 # hand, which is 800-odd lines kept identical on trust. Edit vault/ui/base.css;
 # this makes the copy.
-cp vault/ui/base.css host/ui/base.css
-echo "wrote host/ui/base.css"
+for shared in base.css toast.js confirm.js; do
+  cp "vault/ui/$shared" "host/ui/$shared"
+  echo "wrote host/ui/$shared"
+done
 
 # Stamp the commit into both origins so a reader can match what is running to
 # what is in the repository. There is no build step to read it from, so it is

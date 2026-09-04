@@ -20,7 +20,7 @@ import { CREDIT_BANDS, isIsoDate } from './facts.js';
  * One binary answer distinguishes at most two states of the world, so log2(2)=1.
  * Used as the unit for the disclosure meter in the UI.
  */
-export const BITS_PER_BOOLEAN = 1;
+const BITS_PER_BOOLEAN = 1;
 
 /**
  * Upper bound on characters a predicate may return.
@@ -29,7 +29,7 @@ export const BITS_PER_BOOLEAN = 1;
  * it starts costing the agent real context. Predicates answer in a word or two,
  * so this only ever trips on a malformed fact record.
  */
-export const MAX_ANSWER_CHARS = 1500;
+const MAX_ANSWER_CHARS = 1500;
 
 /**
  * Ceiling on the rent multiple an agent may test.
@@ -41,7 +41,7 @@ export const MAX_ANSWER_CHARS = 1500;
 export const MAX_RENT_MULTIPLE = 6;
 
 /** Ceiling on a monthly rent figure, in GBP, accepted for affordability tests. */
-export const MAX_MONTHLY_RENT_GBP = 100000;
+const MAX_MONTHLY_RENT_GBP = 100000;
 
 /**
  * @typedef {object} Predicate
@@ -481,7 +481,7 @@ export const PREDICATES = Object.freeze([
 ]);
 
 /** @type {ReadonlyMap<string, Predicate>} name to predicate, for O(1) lookup. */
-export const PREDICATES_BY_NAME = new Map(PREDICATES.map((p) => [p.name, p]));
+const PREDICATES_BY_NAME = new Map(PREDICATES.map((p) => [p.name, p]));
 
 /**
  * Look one predicate up by wire name.

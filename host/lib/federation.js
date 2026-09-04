@@ -35,7 +35,7 @@ export const PROXY_PREFIX = 'applicant_';
  * a millisecond. A call still pending after this has hit something pathological,
  * and the agent is better served by a clear timeout than an open promise.
  */
-export const CALL_TIMEOUT_MS = 10_000;
+const CALL_TIMEOUT_MS = 10_000;
 
 /**
  * Debounce window for rediscovery, in ms.
@@ -45,7 +45,7 @@ export const CALL_TIMEOUT_MS = 10_000;
  * work nine times and produces a burst of half-complete tool sets. Coalescing
  * them into a single pass at the end is both cheaper and correct.
  */
-export const REDISCOVER_DEBOUNCE_MS = 120;
+const REDISCOVER_DEBOUNCE_MS = 120;
 
 /**
  * Normalise the `inputSchema` on a tool handle into the shape `registerTool`

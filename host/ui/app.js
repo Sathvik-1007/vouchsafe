@@ -11,14 +11,15 @@
 
 import { COMMIT, BUILT_AT } from '../build.js';
 import { LISTINGS, findListing, depositFor } from '../lib/listings.js';
-import { discover, watchForChanges, federationState, onFederationChange, webmcpAvailable, federatedHandles, PROXY_PREFIX } from '../lib/federation.js';
+import { discover, watchForChanges, federationState, onFederationChange, webmcpAvailable, federatedHandles } from '../lib/federation.js';
 import { assess, summarise, resultsFor, clearResults } from '../lib/assessment.js';
 import { registerHostTools, hostToolNames } from '../lib/agentsurface.js';
 import { escapeHtml as esc, gbp, errText } from '../lib/util.js';
-import { drawGraph, shortOrigin } from './graph.js';
+import { drawGraph } from './graph.js';
 import { compareDisclosure } from '../lib/counterfactual.js';
 import { runDemo, demoRunning } from './demo.js';
 import { vaultOrigin, hostOrigin } from '../config.js';
+import { notify } from './toast.js';
 
 /** Listing the user is currently looking at. */
 let activeListing = LISTINGS[0].id;
@@ -225,7 +226,7 @@ async function runChecks() {
   try {
     await assess(activeListing, federatedHandles());
   } catch (err) {
-    $('notice-slot').innerHTML = '<div class="notice bad">' + esc(errText(err)) + '</div>';
+    notify('The checks could not run.', { tone: 'bad', detail: errText(err) });
   } finally {
     assessing = false;
     renderAssessment();
@@ -293,7 +294,7 @@ function wireEvents() {
     if (demoRunning()) return;
     runDemo(renderDemo).catch((err) => {
       renderDemo(null);
-      $('notice-slot').innerHTML = '<div class="notice bad">The walkthrough stopped: ' + esc(errText(err)) + '</div>';
+      notify('The walkthrough stopped.', { tone: 'bad', detail: errText(err) });
     });
   });
 }

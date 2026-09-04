@@ -185,6 +185,40 @@ class Browser {
 
 const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
 
+/**
+ * Wait for something to become true, rather than for a fixed number of
+ * milliseconds.
+ *
+ * Every fixed wait in a browser test is a guess, and it is wrong twice: too
+ * short on a slow machine, so the suite fails for no reason, and too long on a
+ * fast one, so every run pays for the worst case. This polls, returns the
+ * moment the condition holds, and reports what it was waiting for when it does
+ * not.
+ *
+ * @template T
+ * @param {() => Promise<T>} probe          read the state under test
+ * @param {(value: T) => boolean} settled   has it arrived?
+ * @param {object} [options]
+ * @param {string} [options.what]           named in the timeout message
+ * @param {number} [options.timeout]        give up after this, ms
+ * @param {number} [options.interval]       how often to look, ms
+ * @returns {Promise<T>} the settled value
+ */
+async function until(probe, settled, { what = 'a condition', timeout = 10000, interval = 50 } = {}) {
+  const deadline = Date.now() + timeout;
+  let last;
+  for (;;) {
+    last = await probe();
+    if (settled(last)) return last;
+    if (Date.now() >= deadline) {
+      throw new Error(
+        `timed out after ${timeout}ms waiting for ${what}; last saw ${JSON.stringify(last)}`
+      );
+    }
+    await sleep(interval);
+  }
+}
+
 /* -------------------------------------------------------------------------- */
 /* assertions                                                                 */
 /* -------------------------------------------------------------------------- */
@@ -241,12 +275,42 @@ async function main() {
   const clickVault = (sel) => browser.evalIn(VAULT_ORIGIN,
     `(()=>{const e=document.querySelector(${JSON.stringify(sel)}); if(!e) return 'MISSING'; e.click(); return 'ok';})()`);
 
-  /** Press a destructive control twice, which is what its guard requires. */
-  const clickVaultTwice = async (sel) => {
+  /**
+   * Press a destructive control and answer the confirmation it raises.
+   *
+   * The guard is a question anchored to the control, not a second press and not
+   * a browser dialog, so a test answers it the way a person does.
+   */
+  const clickVaultAndConfirm = async (sel) => {
     const first = await clickVault(sel);
     if (first !== 'ok') return first;
-    await sleep(250);
-    return clickVault(sel);
+    return until(
+      () => browser.evalIn(VAULT_ORIGIN, `(() => {
+        const box = document.querySelector('.confirm');
+        if (!box) return 'no-dialog';
+        const go = box.querySelector('.confirm-actions button.revoke');
+        if (!go) return 'no-button';
+        go.click();
+        return 'ok';
+      })()`),
+      (result) => result === 'ok',
+      { what: 'the confirmation for ' + sel, timeout: 4000 }
+    );
+  };
+
+  /** Press a destructive control and decline the confirmation. */
+  const clickVaultAndCancel = async (sel) => {
+    await clickVault(sel);
+    return until(
+      () => browser.evalIn(VAULT_ORIGIN, `(() => {
+        const box = document.querySelector('.confirm');
+        if (!box) return 'no-dialog';
+        box.querySelector('.confirm-actions button.quiet').click();
+        return 'ok';
+      })()`),
+      (result) => result === 'ok',
+      { what: 'the confirmation for ' + sel, timeout: 4000 }
+    );
   };
 
   const textIn = (origin, sel) => browser.evalIn(origin,
@@ -290,10 +354,12 @@ async function main() {
 
   await check('"Allow the standard nine" registers nine predicates', async () => {
     eq(await clickVault('#grant-typical'), 'ok', 'button present');
-    await sleep(900);
-    const tools = await toolsIn(VAULT_ORIGIN);
-    const predicates = tools.filter((t) => !t.startsWith('vault_'));
-    eq(predicates.length, 9, 'predicate count');
+    const tools = await until(
+      () => toolsIn(VAULT_ORIGIN),
+      (list) => list.filter((t) => !t.startsWith('vault_')).length === 9,
+      { what: 'nine predicates to register' }
+    );
+    eq(tools.filter((t) => !t.startsWith('vault_')).length, 9, 'predicate count');
     eq(await textIn(VAULT_ORIGIN, '#bits-total'), '9', 'bits after granting nine');
   });
 
@@ -326,30 +392,38 @@ async function main() {
 
   await check('withdrawing one permission unregisters exactly that tool', async () => {
     eq(await clickVault('#permission-list button[data-name="income_meets_multiple"]'), 'ok', 'button');
-    await sleep(800);
-    const tools = await toolsIn(VAULT_ORIGIN);
-    ok(!tools.includes('income_meets_multiple'), 'tool still registered after withdrawal');
+    await until(
+      () => toolsIn(VAULT_ORIGIN),
+      (list) => !list.includes('income_meets_multiple'),
+      { what: 'the withdrawn tool to be unregistered' }
+    );
     eq(await textIn(VAULT_ORIGIN, '#bits-total'), '8', 'bits after withdrawing one');
   });
 
   await check('allowing it again re-registers it', async () => {
     eq(await clickVault('#permission-list button[data-name="income_meets_multiple"]'), 'ok', 'button');
-    await sleep(800);
-    ok((await toolsIn(VAULT_ORIGIN)).includes('income_meets_multiple'), 'tool did not come back');
+    await until(
+      () => toolsIn(VAULT_ORIGIN),
+      (list) => list.includes('income_meets_multiple'),
+      { what: 'the tool to be registered again' }
+    );
   });
 
   await check('a raw disclosure costs visibly more', async () => {
     eq(await clickVault('#permission-list button[data-name="disclose_exact_income"]'), 'ok', 'button');
-    await sleep(700);
-    eq(await textIn(VAULT_ORIGIN, '#bits-total'), '18.8', 'bits after a raw disclosure');
+    await until(() => textIn(VAULT_ORIGIN, '#bits-total'), (v) => v === '18.8',
+      { what: 'the meter to price a raw disclosure' });
     eq(await clickVault('#permission-list button[data-name="disclose_exact_income"]'), 'ok', 'withdraw');
-    await sleep(700);
+    await until(() => textIn(VAULT_ORIGIN, '#bits-total'), (v) => v === '9',
+      { what: 'the meter to fall back' });
   });
 
   await check('editing a fact changes what the answers are computed from', async () => {
     await browser.evalIn(VAULT_ORIGIN, `(()=>{const i=document.querySelector('[data-fact="annualIncomeGbp"]');
       i.value='12000'; i.dispatchEvent(new Event('change',{bubbles:true})); return 'ok';})()`);
-    await sleep(600);
+    await until(() => browser.evalIn(VAULT_ORIGIN,
+      `document.querySelector('[data-fact="annualIncomeGbp"]').value`),
+      (v) => v === '12000', { what: 'the edited income to persist' });
     const answer = await browser.evalIn(VAULT_ORIGIN,
       `(async()=>{const t=(await document.modelContext.getTools()).find(x=>x.name==='income_meets_multiple');
         return await document.modelContext.executeTool(t, '{"monthly_rent_gbp":1150,"multiple":3}');})()`);
@@ -365,7 +439,7 @@ async function main() {
   });
 
   await check('"Restore the sample" puts the file back', async () => {
-    eq(await clickVaultTwice('#reset-facts'), 'ok', 'button');
+    eq(await clickVaultAndConfirm('#reset-facts'), 'ok', 'button');
     await sleep(500);
     const value = await browser.evalIn(VAULT_ORIGIN, `document.querySelector('[data-fact="annualIncomeGbp"]').value`);
     eq(value, '41400', 'income restored');
@@ -374,43 +448,55 @@ async function main() {
   await check('the ledger records what happened, and clears', async () => {
     const before = await browser.evalIn(VAULT_ORIGIN, `document.querySelectorAll('#ledger li').length`);
     ok(before > 0, 'ledger is empty after all that activity');
-    eq(await clickVaultTwice('#clear-ledger'), 'ok', 'button');
+    eq(await clickVaultAndConfirm('#clear-ledger'), 'ok', 'button');
     await sleep(400);
     const after = await textIn(VAULT_ORIGIN, '#ledger');
     ok(after.includes('Nothing has been asked'), 'ledger did not clear, shows: ' + after);
   });
 
-  await check('a destructive control will not fire on a single press', async () => {
-    // `window.confirm` was the obvious guard and the wrong one: Chrome
-    // suppresses dialogs from a cross-origin iframe, which is where this panel
-    // spends most of its life, so the guard would have been missing exactly
-    // where the button is easiest to hit by accident.
+  await check('a destructive control asks before it destroys, and can be declined', async () => {
+    // The guard is a question anchored to the control. `window.confirm` was the
+    // obvious choice and the wrong one: Chrome suppresses dialogs from a
+    // cross-origin iframe, which is where this panel spends most of its life,
+    // so the guard would have been missing exactly where the button is easiest
+    // to hit by accident.
     eq(await clickVault('#grant-typical'), 'ok', 'set something up to destroy');
-    await sleep(900);
-    const before = (await toolsIn(VAULT_ORIGIN)).length;
+    const before = (await until(
+      () => toolsIn(VAULT_ORIGIN),
+      (list) => list.filter((t) => !t.startsWith('vault_')).length === 9,
+      { what: 'nine permissions to be allowed' }
+    )).length;
 
     eq(await clickVault('#revoke-all'), 'ok', 'first press');
-    await sleep(600);
-    eq((await toolsIn(VAULT_ORIGIN)).length, before, 'one press destroyed the grants');
-    ok(
-      /Press again/i.test(await textIn(VAULT_ORIGIN, '#revoke-all')),
-      'the button did not ask for confirmation'
+    const asked = await until(
+      () => browser.evalIn(VAULT_ORIGIN, `(() => {
+        const box = document.querySelector('.confirm');
+        return box ? box.textContent.replace(/\\s+/g, ' ').trim() : null;
+      })()`),
+      (text) => text !== null,
+      { what: 'the confirmation to open' }
     );
+    ok(/Withdraw all 9/.test(asked), 'the question does not say what will happen: ' + asked);
+    ok(/Keep it/.test(asked), 'there is no way to decline');
+    eq((await toolsIn(VAULT_ORIGIN)).length, before, 'one press destroyed the permissions');
 
-    // And it disarms itself rather than staying loaded indefinitely.
-    await sleep(5400);
-    ok(
-      !/Press again/i.test(await textIn(VAULT_ORIGIN, '#revoke-all')),
-      'the button stayed armed after the window closed'
+    eq(await clickVaultAndCancel('#revoke-all'), 'ok', 'decline');
+    await sleep(400);
+    eq((await toolsIn(VAULT_ORIGIN)).length, before, 'declining still destroyed the permissions');
+    eq(
+      await browser.evalIn(VAULT_ORIGIN, `document.querySelector('.confirm') === null`),
+      true,
+      'the confirmation stayed open after being declined'
     );
-    eq((await toolsIn(VAULT_ORIGIN)).length, before, 'grants changed while merely waiting');
   });
 
   await check('"Withdraw everything" leaves no predicate registered', async () => {
-    eq(await clickVaultTwice('#revoke-all'), 'ok', 'button');
-    await sleep(900);
-    const tools = await toolsIn(VAULT_ORIGIN);
-    ok(tools.every((t) => t.startsWith('vault_')), 'predicates survived a full withdrawal: ' + tools.join(','));
+    eq(await clickVaultAndConfirm('#revoke-all'), 'ok', 'button');
+    const tools = await until(
+      () => toolsIn(VAULT_ORIGIN),
+      (list) => list.every((t) => t.startsWith('vault_')),
+      { what: 'every predicate to be withdrawn' }
+    );
     eq(await textIn(VAULT_ORIGIN, '#bits-total'), '0', 'bits');
   });
 
@@ -443,9 +529,8 @@ async function main() {
 
   await check('granting in the embedded vault crosses the origin boundary', async () => {
     eq(await clickVault('#grant-typical'), 'ok', 'button');
-    await sleep(1600);
-    const federated = await federatedFromVault();
-    eq(federated.length, 9, 'tools visible across the boundary');
+    const federated = await until(federatedFromVault, (list) => list.length === 9,
+      { what: 'nine tools to cross the origin boundary' });
     ok(federated.includes('income_meets_multiple'), 'income question not visible');
   });
 
@@ -481,9 +566,11 @@ async function main() {
 
   await check('the assessment renders a stamp per check in the interface', async () => {
     await browser.evalIn(HOST_ORIGIN, `document.querySelector('#listings button[data-listing="ml-114"]').click()`);
-    await sleep(2200);
-    const stamps = await browser.evalIn(HOST_ORIGIN, `document.querySelectorAll('#assessment .stamp').length`);
-    eq(stamps, 9, 'stamps rendered');
+    const stamps = await until(
+      () => browser.evalIn(HOST_ORIGIN, `document.querySelectorAll('#assessment .stamp').length`),
+      (n) => n === 9,
+      { what: 'nine stamps to be rendered' }
+    );
     ok((await textIn(HOST_ORIGIN, '#assessment')).includes('You qualify'), 'verdict copy');
   });
 
@@ -530,9 +617,8 @@ async function main() {
   await check('withdrawing one permission removes the proxy from the other origin', async () => {
     const before = (await toolsIn(HOST_ORIGIN)).length;
     eq(await clickVault('#permission-list button[data-name="income_meets_multiple"]'), 'ok', 'button');
-    await sleep(1800);
-    const after = await toolsIn(HOST_ORIGIN);
-    eq(after.length, before - 1, 'published tool count');
+    const after = await until(() => toolsIn(HOST_ORIGIN), (list) => list.length === before - 1,
+      { what: 'the proxy to disappear from the other origin' });
     ok(!after.includes('applicant_income_meets_multiple'), 'proxy survived withdrawal');
   });
 
@@ -545,10 +631,10 @@ async function main() {
   });
 
   await check('withdrawing everything empties the graph', async () => {
-    eq(await clickVaultTwice('#revoke-all'), 'ok', 'button');
-    await sleep(1800);
-    const own = await toolsIn(HOST_ORIGIN);
-    ok(!own.some((t) => t.startsWith('applicant_')), 'proxies survived: ' + own.join(','));
+    eq(await clickVaultAndConfirm('#revoke-all'), 'ok', 'button');
+    const own = await until(() => toolsIn(HOST_ORIGIN),
+      (list) => !list.some((t) => t.startsWith('applicant_')),
+      { what: 'every proxy to be torn down' });
     ok((await textIn(HOST_ORIGIN, '#graph-caption')).includes('Nothing yet'), 'caption did not reset');
   });
 
@@ -560,7 +646,8 @@ async function main() {
     // something to read.
     await browser.goto(`${HOST_ORIGIN}/proof.html?vault=${encodeURIComponent(VAULT_ORIGIN)}`, 5000);
     eq(await clickVault('#grant-typical'), 'ok', 'grant the standard nine');
-    await sleep(2000);
+    await until(() => textIn(HOST_ORIGIN, '#fig-borrowed'), (v) => v === '9',
+      { what: 'the proof page to see nine borrowed tools' });
     // It registers nothing of its own, which is what makes it a witness rather
     // than a participant.
     eq(await textIn(HOST_ORIGIN, '#fig-own'), '0', 'the proof page registered tools of its own');
@@ -616,7 +703,7 @@ async function main() {
     // had not armed the vault saw "You allow nine questions" over an empty
     // diagram, then "Nine questions. Nine one-word answers." over nine
     // NOT GRANTED lines.
-    await clickVaultTwice('#revoke-all');
+    await clickVaultAndConfirm('#revoke-all');
     await sleep(1200);
     await browser.evalIn(VAULT_ORIGIN, `(() => {
       const t = document.getElementById('demo-toggle');
@@ -625,10 +712,14 @@ async function main() {
     })()`);
 
     await browser.evalIn(HOST_ORIGIN, `document.getElementById('play-demo').click()`);
-    // Steps 1 and 2 only narrate; step 3 is the first that asks the vault.
-    await sleep(9000);
-
-    const caption = await textIn(HOST_ORIGIN, '#demo-caption');
+    // Steps 1 and 2 only narrate; step 3 is the first that asks the vault, so
+    // wait for the refusal to appear rather than for a guess at how long three
+    // beats take.
+    const caption = await until(
+      () => textIn(HOST_ORIGIN, '#demo-caption'),
+      (text) => /declined|did not answer/i.test(text),
+      { what: 'the walkthrough to stop on the refusal', timeout: 20000 }
+    );
     ok(/declined|did not answer/i.test(caption), 'the walkthrough narrated past a refusal: ' + caption);
     ok(
       (await textIn(HOST_ORIGIN, '#demo-progress')).startsWith('Stopped'),
@@ -648,13 +739,18 @@ async function main() {
       t.checked = true; t.dispatchEvent(new Event('change'));
       return 'armed';
     })()`);
-    await sleep(7000);   // let the halted run release the button
+    // Wait for the halted run to release the button rather than guessing.
+    await until(
+      () => browser.evalIn(HOST_ORIGIN, `document.getElementById('play-demo').disabled`),
+      (disabled) => disabled === false,
+      { what: 'the halted walkthrough to finish', timeout: 20000 }
+    );
 
     await browser.evalIn(HOST_ORIGIN, `document.getElementById('play-demo').click()`);
-    await sleep(14000);  // through the grant and the first check
-
-    const borrowed = await federatedFromVault();
-    eq(borrowed.length, 9, 'the walkthrough did not actually grant anything');
+    const borrowed = await until(federatedFromVault, (list) => list.length === 9, {
+      what: 'the walkthrough to actually grant nine questions',
+      timeout: 30000,
+    });
     ok(
       !(await textIn(HOST_ORIGIN, '#demo-progress')).startsWith('Stopped'),
       'an armed run stopped anyway: ' + (await textIn(HOST_ORIGIN, '#demo-caption'))
@@ -770,14 +866,23 @@ async function main() {
   });
 
   await check('the page does not scroll sideways on a phone', async () => {
-    await browser.send('Emulation.setDeviceMetricsOverride', {
-      width: 390, height: 844, deviceScaleFactor: 2, mobile: true,
-    });
-    await sleep(700);
-    const overflow = await browser.evalIn(HOST_ORIGIN,
-      `document.documentElement.scrollWidth - document.documentElement.clientWidth`);
-    await browser.send('Emulation.clearDeviceMetricsOverride');
-    await sleep(400);
+    // try/finally, not a straight line. An earlier version cleared the override
+    // only on the happy path, so any failure in between left every later check
+    // running against a 390px viewport, which reads as the page collapsing into
+    // its mobile layout partway through a run and stalls the diagnosis on the
+    // wrong thing entirely.
+    let overflow;
+    try {
+      await browser.send('Emulation.setDeviceMetricsOverride', {
+        width: 390, height: 844, deviceScaleFactor: 2, mobile: true,
+      });
+      await sleep(700);
+      overflow = await browser.evalIn(HOST_ORIGIN,
+        `document.documentElement.scrollWidth - document.documentElement.clientWidth`);
+    } finally {
+      await browser.send('Emulation.clearDeviceMetricsOverride');
+      await sleep(400);
+    }
     ok(overflow <= 1, 'horizontal overflow of ' + overflow + 'px at 390px wide');
   });
 
@@ -799,17 +904,21 @@ async function main() {
   });
 
   await check('motion is dropped when the viewer asks for less of it', async () => {
-    await browser.send('Emulation.setEmulatedMedia', {
-      features: [{ name: 'prefers-reduced-motion', value: 'reduce' }],
-    });
-    await sleep(400);
-    const animated = await browser.evalIn(VAULT_ORIGIN, `(() => {
-      const el = document.querySelector('.stamp') || document.querySelector('.redacted');
-      if (!el) return 'none';
-      el.classList.add('is-fresh', 'is-wiping');
-      return getComputedStyle(el).animationName;
-    })()`);
-    await browser.send('Emulation.setEmulatedMedia', { features: [] });
+    let animated;
+    try {
+      await browser.send('Emulation.setEmulatedMedia', {
+        features: [{ name: 'prefers-reduced-motion', value: 'reduce' }],
+      });
+      await sleep(400);
+      animated = await browser.evalIn(VAULT_ORIGIN, `(() => {
+        const el = document.querySelector('.stamp') || document.querySelector('.redacted');
+        if (!el) return 'none';
+        el.classList.add('is-fresh', 'is-wiping');
+        return getComputedStyle(el).animationName;
+      })()`);
+    } finally {
+      await browser.send('Emulation.setEmulatedMedia', { features: [] });
+    }
     ok(animated === 'none', 'animation still runs under reduced motion: ' + animated);
   });
 

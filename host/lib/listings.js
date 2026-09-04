@@ -37,7 +37,7 @@
  */
 
 /** Deposit convention in England: five weeks' rent for annual rent under £50,000. */
-export const DEPOSIT_WEEKS = 5;
+const DEPOSIT_WEEKS = 5;
 
 /** Weeks in a year, used to convert monthly rent to the statutory deposit cap. */
 const WEEKS_PER_YEAR = 52;

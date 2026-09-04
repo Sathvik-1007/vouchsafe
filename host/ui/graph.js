@@ -103,16 +103,10 @@ export function drawGraph(svg, state) {
       'font-family="Fraunces, Georgia, serif" font-style="italic" font-size="13">where one website ends</text>'
   );
 
-  if (shown.length === 0) {
-    parts.push(
-      '<text x="470" y="' + (MID_Y + 4) + '" text-anchor="middle" fill="#8d9386" ' +
-        'font-family="ui-monospace, monospace" font-size="11.5">' +
-        (state.vaultReachable
-          ? 'nothing allowed yet, so this agency knows nothing'
-          : 'their file is not open') +
-        '</text>'
-    );
-  }
+  // Deliberately nothing when empty. An earlier version drew an explanatory
+  // line here, on the same centre line as the two node boxes, which are painted
+  // afterwards and covered it. The caption above the diagram already says the
+  // same thing, in flowing text that can wrap.
 
   // One lane per borrowed capability, fanned symmetrically about the midline.
   const top = MID_Y - ((shown.length - 1) * LANE_GAP) / 2;

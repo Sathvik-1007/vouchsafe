@@ -23,7 +23,7 @@
 import { readFacts, writeFact, SEED_FACTS, errText } from './facts.js';
 import { PREDICATES, findPredicate } from './predicates.js';
 import { compareDisclosure, counterfactualFor } from './counterfactual.js';
-import { checkProbe, recordProbe, activeProbes, bracketFor } from './probe.js';
+import { checkProbe, recordProbe, activeProbes } from './probe.js';
 import {
   readGrants,
   grant,

@@ -22,13 +22,13 @@ const FACTS_KEY = 'bureau.facts.v1';
  * free-text fact has no legitimate reason to approach that, so we cap well
  * below it and fail loudly rather than let one oversized note evict the record.
  */
-export const MAX_FACT_STRING_LENGTH = 4096;
+const MAX_FACT_STRING_LENGTH = 4096;
 
 /** Largest household size accepted. Above this the input is a typo, not a household. */
-export const MAX_HOUSEHOLD_SIZE = 32;
+const MAX_HOUSEHOLD_SIZE = 32;
 
 /** Largest reference count accepted. */
-export const MAX_REFERENCES = 32;
+const MAX_REFERENCES = 32;
 
 /**
  * The demonstration renter.

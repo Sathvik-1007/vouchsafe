@@ -18,7 +18,7 @@
  */
 
 import { COMMIT, BUILT_AT } from '../build.js';
-import { vaultOrigin, hostOrigin } from '../config.js';
+import { vaultOrigin } from '../config.js';
 import { escapeHtml as esc, errText } from '../lib/util.js';
 
 /** Most events kept in the log. Older ones are dropped from the view, not hidden. */

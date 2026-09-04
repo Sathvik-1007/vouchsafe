@@ -1,4 +1,25 @@
 /**
+ * Say what just happened.
+ *
+ * Every control that changes something says so. Before this, granting,
+ * withdrawing, clearing the log and restoring all changed state in silence, and
+ * the only way to tell a working button from a broken one was to go looking for
+ * the effect.
+ *
+ * Messages go to the corner stack rather than a banner at the top of the page.
+ * A banner pushes the layout down, so the control you just pressed moves out
+ * from under the cursor, and on a phone it eats the whole first screen.
+ *
+ * @param {string} message
+ * @param {'good' | 'bad'} [tone]
+ * @param {string} [detail]
+ * @returns {void}
+ */
+function announce(message, tone = 'good', detail) {
+  notify(message, { tone, detail });
+}
+
+/**
  * @file The vault's interface.
  *
  * Responsible for: rendering the redacted reference, the permission list, the
@@ -21,10 +42,12 @@ import {
   CREDIT_BANDS,
 } from '../lib/facts.js';
 import { PREDICATES, findPredicate } from '../lib/predicates.js';
-import { compareDisclosure, counterfactualFor } from '../lib/counterfactual.js';
+import { compareDisclosure } from '../lib/counterfactual.js';
 import { activeProbes, MAX_DISTINCT_PROBES } from '../lib/probe.js';
 import { fieldLabel, FIELD_GROUPS, permissionQuestion, redactedValue } from '../lib/labels.js';
 import { hostOrigin } from '../config.js';
+import { notify } from './toast.js';
+import { confirmAction } from './confirm.js';
 import {
   KNOWN_ORIGINS,
   readGrants,
@@ -458,66 +481,6 @@ function renderAll() {
 }
 
 /**
- * Ask a destructive button to be pressed twice.
- *
- * `window.confirm` was the obvious choice and the wrong one. Chrome suppresses
- * dialogs from a cross-origin iframe, and this panel spends most of its life
- * embedded in a letting agent's page, so the guard would have been absent
- * exactly where the button is easiest to hit by accident. It also blocks the
- * page, which no confirmation needs to.
- *
- * So the button asks for itself again, in place, and gives up after a few
- * seconds. Nothing is destroyed on a single press.
- *
- * @param {HTMLButtonElement} button
- * @param {string} prompt what the second press will do
- * @returns {boolean} true when this is the confirming press
- */
-function confirmTwice(button, prompt) {
-  if (button.dataset.armed === 'yes') {
-    clearTimeout(Number(button.dataset.timer));
-    button.dataset.armed = 'no';
-    button.textContent = button.dataset.restLabel ?? button.textContent;
-    return true;
-  }
-
-  button.dataset.restLabel = button.textContent;
-  button.dataset.armed = 'yes';
-  button.textContent = prompt;
-  button.dataset.timer = String(
-    setTimeout(() => {
-      button.dataset.armed = 'no';
-      button.textContent = button.dataset.restLabel ?? button.textContent;
-    }, 5000)
-  );
-  return false;
-}
-
-/**
- * Say what just happened.
- *
- * Every control that changes something says so. Before this, granting,
- * withdrawing, clearing the log and restoring the sample all changed state in
- * silence, and the only way to tell a working button from a broken one was to
- * go looking for the effect.
- *
- * @param {string} message
- * @param {'good' | 'bad'} [tone]
- * @returns {void}
- */
-function announce(message, tone = 'good') {
-  $('notice-slot').innerHTML =
-    '<div class="notice ' + tone + '">' + esc(message) + '</div>';
-  clearTimeout(announce.timer);
-  // Confirmations are transient; errors stay until something else replaces them.
-  if (tone === 'good') {
-    announce.timer = setTimeout(() => {
-      if ($('notice-slot').textContent === message) $('notice-slot').innerHTML = '';
-    }, 6000);
-  }
-}
-
-/**
  * Put a validation message into the words the field is labelled with.
  *
  * The stores validate against wire names, because that is what they hold. The
@@ -553,7 +516,7 @@ function humanise(key, error) {
 async function applyChange(mutate, animate = [], said = '') {
   const result = mutate();
   if (!result.ok) {
-    announce(result.error ?? 'That change could not be saved. Nothing has been altered.', 'bad');
+    announce('That change could not be saved.', 'bad', result.error ?? 'Nothing has been altered.');
     return;
   }
   freshlyGranted = new Set(animate);
@@ -573,7 +536,6 @@ async function applyChange(mutate, animate = [], said = '') {
     return;
   }
   if (said) announce(said);
-  else $('notice-slot').innerHTML = '';
 }
 
 function wireEvents() {
@@ -607,27 +569,38 @@ function wireEvents() {
     }, TYPICAL_GRANTS, 'Allowed all nine. That is the whole of an ordinary letting check, and it is nine bits.')
   );
 
-  $('revoke-all').addEventListener('click', () => {
+  $('revoke-all').addEventListener('click', async () => {
     const held = (readGrants()[selected] ?? []).length;
     if (held === 0) {
-      announce('There was nothing to withdraw. This agent already holds no permissions.');
+      announce('Nothing to withdraw. This agency already holds no permissions.', 'good');
       return;
     }
     // Irreversible, and it sits next to the button that grants.
-    if (!confirmTwice($('revoke-all'), 'Press again to withdraw all ' + held)) return;
-    applyChange(() => revokeAll(selected), [], 'Withdrew all ' + held + '. This agent can no longer ask anything.');
+    const agreed = await confirmAction($('revoke-all'), {
+      question: 'Withdraw all ' + held + ' permissions?',
+      detail: 'They lose the ability to ask anything at all, immediately. You can allow them again afterwards.',
+      confirmLabel: 'Withdraw all',
+    });
+    if (!agreed) return;
+    applyChange(() => revokeAll(selected), [],
+      'Withdrew all ' + held + '. This agency can no longer ask anything.');
   });
 
-  $('clear-ledger').addEventListener('click', () => {
+  $('clear-ledger').addEventListener('click', async () => {
     const entries = readLedger().length;
     if (entries === 0) {
       announce('The log is already empty.');
       return;
     }
-    if (!confirmTwice($('clear-ledger'), 'Press again to clear ' + entries)) return;
+    const agreed = await confirmAction($('clear-ledger'), {
+      question: 'Clear all ' + entries + ' entries?',
+      detail: 'This log is your only copy of what was asked. Clearing it cannot be undone.',
+      confirmLabel: 'Clear the log',
+    });
+    if (!agreed) return;
     const result = clearLedger();
     if (!result.ok) {
-      announce('The log could not be cleared: ' + result.error, 'bad');
+      announce('The log could not be cleared.', 'bad', result.error);
       return;
     }
     renderLedger();
@@ -637,7 +610,7 @@ function wireEvents() {
   $('applicant-picker').addEventListener('change', (e) => {
     const result = loadApplicant(e.target.value);
     if (!result.ok) {
-      $('notice-slot').innerHTML = '<div class="notice bad">' + esc(result.error) + '</div>';
+      announce('Could not switch applicant.', 'bad', result.error);
       return;
     }
     renderFacts();
@@ -646,11 +619,16 @@ function wireEvents() {
     announce('Switched to ' + e.target.selectedOptions[0].textContent + '. Every answer below now comes from their details.');
   });
 
-  $('reset-facts').addEventListener('click', () => {
-    if (!confirmTwice($('reset-facts'), 'Press again to discard your edits')) return;
+  $('reset-facts').addEventListener('click', async () => {
+    const agreed = await confirmAction($('reset-facts'), {
+      question: 'Discard your edits?',
+      detail: 'Anything you have typed goes back to the sample details for this applicant.',
+      confirmLabel: 'Discard and restore',
+    });
+    if (!agreed) return;
     const result = resetFacts();
     if (!result.ok) {
-      $('notice-slot').innerHTML = '<div class="notice bad">' + esc(result.error) + '</div>';
+      announce('Could not switch applicant.', 'bad', result.error);
       return;
     }
     renderFacts();
@@ -665,8 +643,7 @@ function wireEvents() {
     const key = field.dataset.fact;
     const result = writeFact(key, field.value);
     if (!result.ok) {
-      $('notice-slot').innerHTML =
-        '<div class="notice bad">' + esc(humanise(key, result.error)) + '</div>';
+      announce(humanise(key, result.error), 'bad');
       renderFacts();
       return;
     }

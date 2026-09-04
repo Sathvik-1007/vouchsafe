@@ -30,7 +30,7 @@ const LEDGER_KEY = 'bureau.ledger.v1';
  * recent 500 calls keeps it inside localStorage's quota with room to spare while
  * still covering far more than a single application session.
  */
-export const MAX_LEDGER_ENTRIES = 500;
+const MAX_LEDGER_ENTRIES = 500;
 
 /**
  * Origins the vault will ever consider granting to.

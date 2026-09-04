@@ -9,8 +9,10 @@
     "test": "node --test tests/*.test.js && node tests/e2e.mjs",
     "test:unit": "node --test tests/*.test.js",
     "test:e2e": "node tests/e2e.mjs",
+    "verify:deploy": "node tools/verify-deploy.mjs",
     "serve": "./tools/serve.sh",
-    "sync-config": "./tools/sync-config.sh"
+    "sync": "./tools/sync-config.sh",
+    "docs:tools": "node tools/gen-tools-doc.mjs > TOOLS.md"
   },
   "engines": {
     "node": ">=22"
