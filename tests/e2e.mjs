@@ -243,9 +243,19 @@ class Browser {
     // an error rather than a value, so walk newest-first until one responds.
     let lastError = null;
     for (const ctx of candidates) {
-      const res = await this.send('Runtime.evaluate', {
-        expression, awaitPromise: true, returnByValue: true, contextId: ctx.id,
-      });
+      // A short budget per candidate. Contexts accumulate across navigations and
+      // a detached one may never answer at all; spending the full timeout on
+      // each in turn would report a dead context as a blocked page, which sends
+      // the diagnosis in exactly the wrong direction.
+      let res;
+      try {
+        res = await this.send('Runtime.evaluate', {
+          expression, awaitPromise: true, returnByValue: true, contextId: ctx.id,
+        }, 4000);
+      } catch (err) {
+        lastError = err.message;
+        continue;
+      }
       if (res.error) { lastError = res.error.message; continue; }
       if (res.result?.exceptionDetails) {
         throw new Error('eval threw in ' + origin + ': ' +
@@ -532,8 +542,17 @@ async function main() {
     await browser.evalIn(VAULT_ORIGIN, `(()=>{const i=document.querySelector('[data-fact="householdSize"]');
       i.value='9999'; i.dispatchEvent(new Event('change',{bubbles:true})); return 'ok';})()`);
     await sleep(400);
-    const notice = await textIn(VAULT_ORIGIN, '#notice-slot');
-    ok(notice.includes('householdSize') || notice.includes('exceed'), 'no explanation shown, got: ' + notice);
+    // Messages moved to the corner stack; a banner pushed the layout down and
+    // took the whole first screen on a phone.
+    const notice = await until(
+      () => textIn(VAULT_ORIGIN, '.toast-bad'),
+      (text) => text !== 'MISSING' && text.length > 0,
+      { what: 'the refusal to be reported', timeout: 5000 }
+    );
+    ok(
+      /people moving in/i.test(notice) || /exceed/i.test(notice),
+      'the refusal does not name the field in the words it is labelled with: ' + notice
+    );
   });
 
   await check('"Restore the sample" puts the file back', async () => {
