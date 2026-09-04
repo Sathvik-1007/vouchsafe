@@ -259,6 +259,15 @@ async function main() {
     ok((await textIn(VAULT_ORIGIN, '#reference-empty')).includes('Nothing is allowed'), 'empty state copy');
   });
 
+  await check('the headline states what is true, not a fixed claim', async () => {
+    // It previously asserted "they asked nine questions" while the counters
+    // underneath read zero. An interface that contradicts itself is worse than
+    // one that says less.
+    const idle = await textIn(VAULT_ORIGIN, '#stage-claim');
+    ok(!/nine/i.test(idle), 'headline claims nine with nothing allowed: ' + idle);
+    eq(await textIn(VAULT_ORIGIN, '#stage-bits'), '0', 'bits should be zero here');
+  });
+
   await check('"Allow the standard nine" registers nine predicates', async () => {
     eq(await clickVault('#grant-typical'), 'ok', 'button present');
     await sleep(900);
@@ -266,6 +275,12 @@ async function main() {
     const predicates = tools.filter((t) => !t.startsWith('vault_'));
     eq(predicates.length, 9, 'predicate count');
     eq(await textIn(VAULT_ORIGIN, '#bits-total'), '9', 'bits after granting nine');
+  });
+
+  await check('the headline updates once questions are allowed', async () => {
+    const claim = await textIn(VAULT_ORIGIN, '#stage-claim');
+    ok(/nine/i.test(claim), 'headline did not follow the state: ' + claim);
+    eq(await textIn(VAULT_ORIGIN, '#stage-bits'), '9', 'stage bits');
   });
 
   await check('the redacted reference renders one row per allowed question', async () => {

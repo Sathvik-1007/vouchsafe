@@ -216,10 +216,38 @@ function renderStage() {
   const granted = readGrants()[selected] ?? [];
   const bits = disclosedBits(selected);
   const c = compareDisclosure(granted);
+  const n = granted.length;
+
+  // The headline states what is true right now. An earlier version asserted
+  // "they asked nine questions" while the counters underneath read zero, which
+  // is a claim the interface itself contradicts.
+  $('stage-claim').innerHTML =
+    n === 0
+      ? 'They will ask. Your file answers in <em>one word</em>.'
+      : 'They asked ' + spell(n) + ' question' + (n === 1 ? '' : 's') +
+        '. They received <em>' + spell(n) + ' word' + (n === 1 ? '' : 's') + '</em>.';
+
+  $('stage-sub').textContent =
+    n === 0
+      ? 'Nothing is allowed yet, so this agent holds nothing at all. Everything a letting agency normally demands is already here, and there is no code on this page that could send it anywhere.'
+      : 'Everything they would normally have held about you is still here, on your side of the line, and there is no code on this page that could send it anywhere.';
 
   $('stage-bits').textContent = Number.isInteger(bits) ? String(bits) : bits.toFixed(1);
   $('stage-avoided').textContent = String(c.extraFacts);
   $('stage-ratio').textContent = c.ratio > 0 ? c.ratio + '\u00d7' : '\u2014';
+}
+
+/**
+ * Small numbers read better as words in a headline set at display size, where
+ * a lone numeral looks like a typo rather than a claim.
+ *
+ * @param {number} n
+ * @returns {string}
+ */
+function spell(n) {
+  const words = ['no', 'one', 'two', 'three', 'four', 'five', 'six', 'seven',
+                 'eight', 'nine', 'ten', 'eleven', 'twelve', 'thirteen'];
+  return words[n] ?? String(n);
 }
 
 function renderCounterfactual() {
