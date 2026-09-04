@@ -652,7 +652,14 @@ async function main() {
   });
 
   await check('the letting agent republishes each one as a proxy', async () => {
-    const own = await toolsIn(HOST_ORIGIN);
+    // Republishing happens on `toolchange`, which is debounced, so the vault
+    // can be exposing all nine a moment before this origin has registered any.
+    // Waiting for the effect rather than reading straight after the cause.
+    const own = await until(
+      () => toolsIn(HOST_ORIGIN),
+      (list) => list.filter((t) => t.startsWith('applicant_')).length === 9,
+      { what: 'nine proxies to be republished' }
+    );
     const proxies = own.filter((t) => t.startsWith('applicant_'));
     eq(proxies.length, 9, 'proxy count');
     const shown = await textIn(HOST_ORIGIN, '#tool-count');
@@ -660,7 +667,11 @@ async function main() {
   });
 
   await check('the capability graph draws one line per allowed question', async () => {
-    const lines = await browser.evalIn(HOST_ORIGIN, `document.querySelectorAll('#graph path').length`);
+    const lines = await until(
+      () => browser.evalIn(HOST_ORIGIN, `document.querySelectorAll('#graph path').length`),
+      (n) => n === 18,
+      { what: 'the graph to draw a curve and a stub for each of the nine' }
+    );
     // one curve plus one stub per lane
     eq(lines, 18, 'graph paths');
     ok((await textIn(HOST_ORIGIN, '#graph-caption')).includes('9 questions'), 'caption');
