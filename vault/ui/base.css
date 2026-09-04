@@ -740,3 +740,87 @@ hr.rule { border: 0; border-top: 1px solid var(--rule-soft); margin: 2rem 0; }
     top: 1.25rem;
   }
 }
+
+/* ---- narrow screens ----------------------------------------------------- */
+
+@media (max-width: 46rem) {
+  /*
+   * The figures are a row of three claims. Flex-wrapping them produced orphans:
+   * a number on one line and its label on the next, with the button wedged
+   * between. A two-column grid keeps each number with its own label.
+   */
+  .stage-figures {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 1.5rem 1.25rem;
+  }
+
+  .stage-figures > :last-child {
+    grid-column: 1 / -1;
+    margin-left: 0 !important;
+  }
+
+  .stage-figure-label { max-width: none; }
+
+  /*
+   * The graph is 1200 units wide and unreadable squeezed into 390px. Rather
+   * than shrink it into illegibility or drop it, it keeps a legible minimum and
+   * scrolls inside its own container, so the page itself never scrolls sideways.
+   */
+  .graph-frame {
+    overflow-x: auto;
+    -webkit-overflow-scrolling: touch;
+    scrollbar-width: thin;
+  }
+
+  .graph-frame svg {
+    min-width: 44rem;
+  }
+
+  .graph-frame::after {
+    content: 'scroll to see the whole diagram';
+    display: block;
+    font-size: var(--t-xs);
+    color: #8d9386;
+    padding-top: 0.4rem;
+  }
+
+  .stage-claim { font-size: clamp(2rem, 9vw, 2.6rem); }
+
+  /* The price belongs beside the property, not stranded under its own card. */
+  .listing {
+    grid-template-columns: 3.25rem minmax(0, 1fr);
+    row-gap: 0.75rem;
+  }
+
+  .listing > :last-child {
+    grid-column: 1 / -1;
+    display: flex;
+    align-items: baseline;
+    gap: 0.5rem;
+    text-align: left;
+  }
+
+  .listing > :last-child .listing-meta { margin: 0; }
+  .listing > :last-child button { margin-left: auto; }
+}
+
+/*
+ * Tool names are long identifiers that must not be broken or clipped. Two
+ * columns only once there is genuinely room for two full names; below that the
+ * names collided with the next column.
+ */
+.tool-columns {
+  columns: 1;
+}
+
+@media (min-width: 52rem) {
+  .tool-columns {
+    columns: 2;
+    column-gap: 2.5rem;
+  }
+}
+
+.tool-columns > li {
+  break-inside: avoid;
+}
