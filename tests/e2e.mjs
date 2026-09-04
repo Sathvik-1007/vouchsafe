@@ -17,7 +17,8 @@
  */
 
 import { spawn } from 'node:child_process';
-import { createServer } from 'node:http';
+import { createServer as createHttpServer } from 'node:http';
+import { createServer } from 'node:net';
 import { readFile, mkdtemp } from 'node:fs/promises';
 import { existsSync } from 'node:fs';
 import { join, extname, normalize } from 'node:path';
@@ -29,7 +30,18 @@ const VAULT_PORT = 4401;
 const HOST_PORT = 4402;
 const VAULT_ORIGIN = `http://localhost:${VAULT_PORT}`;
 const HOST_ORIGIN = `http://localhost:${HOST_PORT}`;
-const DEBUG_PORT = 9333;
+/**
+ * The debugging port is chosen at run time, never fixed.
+ *
+ * A fixed port is how this suite came to hang with a blank terminal. An
+ * interrupted run leaves its browser alive and still listening, the next run
+ * polls the same port, finds that browser's stale page, attaches to a renderer
+ * that is gone, and waits forever on its first command. The failure looks like
+ * the tests hanging and has nothing to do with the tests.
+ *
+ * Assigned in `Browser.launch`.
+ */
+let debugPort = 0;
 
 /** Candidate browser binaries, in preference order. */
 const BROWSERS = [
@@ -60,7 +72,7 @@ const MIME = {
  */
 function serve(dir, port) {
   const root = join(ROOT, dir);
-  const server = createServer(async (req, res) => {
+  const server = createHttpServer(async (req, res) => {
     const rel = normalize(decodeURIComponent(req.url.split('?')[0])).replace(/^(\.\.[/\\])+/, '');
     let file = join(root, rel);
     if (rel === '/' || rel === '\\') file = join(root, 'index.html');
@@ -94,14 +106,33 @@ function serve(dir, port) {
 class Browser {
   #ws; #id = 0; #pending = new Map(); #contexts = []; #logs = [];
 
+  /**
+   * Ask the operating system for a port nobody is listening on.
+   *
+   * Binding to port 0 makes the kernel pick a free one and report it. There is
+   * a moment between closing this and the browser binding it that nothing can
+   * fully close, but it is far smaller than the certainty of collision a
+   * hardcoded port carries once a run has been interrupted.
+   *
+   * @returns {Promise<number>}
+   */
+  static async freePort() {
+    const probe = createServer();
+    await new Promise((resolve) => probe.listen(0, '127.0.0.1', resolve));
+    const { port } = probe.address();
+    await new Promise((resolve) => probe.close(resolve));
+    return port;
+  }
+
   static async launch() {
     const bin = BROWSERS.find((b) => existsSync(b));
     if (!bin) throw new Error('no Chromium found; set BROWSER=/path/to/chrome');
+    debugPort = await Browser.freePort();
     const profile = await mkdtemp(join(tmpdir(), 'bureau-e2e-'));
     const proc = spawn(bin, [
       '--enable-features=WebMCP',
       '--enable-blink-features=WebMCP',
-      `--remote-debugging-port=${DEBUG_PORT}`,
+      `--remote-debugging-port=${debugPort}`,
       `--user-data-dir=${profile}`,
       '--no-first-run',
       '--no-default-browser-check',
@@ -113,7 +144,7 @@ class Browser {
     // Poll rather than sleep a fixed amount: a cold profile takes longer.
     for (let i = 0; i < 60; i += 1) {
       try {
-        const list = await (await fetch(`http://localhost:${DEBUG_PORT}/json`)).json();
+        const list = await (await fetch(`http://localhost:${debugPort}/json`)).json();
         if (list.some((t) => t.type === 'page')) break;
       } catch { /* not up yet */ }
       await sleep(500);
@@ -125,12 +156,12 @@ class Browser {
   }
 
   async attach() {
-    const list = await (await fetch(`http://localhost:${DEBUG_PORT}/json`)).json();
+    const list = await (await fetch(`http://localhost:${debugPort}/json`)).json();
     const page = list.find((t) => t.type === 'page');
     if (!page) {
       throw new Error(
-        `the browser started but never exposed a page on port ${DEBUG_PORT}. ` +
-        `If another run is still alive, free it with: fuser -k ${DEBUG_PORT}/tcp`
+        `the browser started but never exposed a page on port ${debugPort}. ` +
+        `If another run is still alive, free it with: fuser -k ${debugPort}/tcp`
       );
     }
     this.#ws = new WebSocket(page.webSocketDebuggerUrl);
@@ -152,10 +183,31 @@ class Browser {
     await this.send('Target.setAutoAttach', { autoAttach: true, waitForDebuggerOnStart: false, flatten: true });
   }
 
-  send(method, params = {}) {
-    return new Promise((r) => {
+  /**
+   * Send one protocol command and wait for its reply.
+   *
+   * The timeout is not optional. A blocked renderer never answers, and without
+   * one the whole suite waits forever on a promise that will not settle: the
+   * terminal shows the last test that passed and nothing after it, which is
+   * indistinguishable from a slow machine and says nothing about where. A
+   * rejection names the command that went unanswered.
+   *
+   * @param {string} method
+   * @param {object} [params]
+   * @param {number} [timeout] milliseconds
+   * @returns {Promise<object>}
+   */
+  send(method, params = {}, timeout = 15000) {
+    return new Promise((resolve, reject) => {
       const id = ++this.#id;
-      this.#pending.set(id, r);
+      const timer = setTimeout(() => {
+        this.#pending.delete(id);
+        reject(new Error(
+          `${method} got no reply in ${timeout}ms; the page is most likely blocked ` +
+          `(a synchronous dialog, or a loop in a render path)`
+        ));
+      }, timeout);
+      this.#pending.set(id, (message) => { clearTimeout(timer); resolve(message); });
       this.#ws.send(JSON.stringify({ id, method, params }));
     });
   }
@@ -199,7 +251,20 @@ class Browser {
     throw new Error(`every context for ${origin} rejected the call: ${lastError}`);
   }
 
-  close() { try { this.proc?.kill(); } catch { /* already gone */ } }
+  /**
+   * Shut the browser down, including the children it spawned.
+   *
+   * `kill()` on the launcher alone leaves renderer and GPU processes behind,
+   * still holding the debugging port. Killing the process group is what makes
+   * the port genuinely free for the next run.
+   */
+  close() {
+    try {
+      process.kill(-this.proc.pid, 'SIGKILL');
+    } catch {
+      try { this.proc?.kill('SIGKILL'); } catch { /* already gone */ }
+    }
+  }
 }
 
 const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
