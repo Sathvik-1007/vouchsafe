@@ -40,14 +40,55 @@ export const VAULT_ORIGIN_DEV = 'http://localhost:4001';
 /** Local development origin of the letting agent. */
 export const HOST_ORIGIN_DEV = 'http://localhost:4002';
 
+/**
+ * Is this a localhost origin, and therefore safe to accept from a query string?
+ *
+ * The override below exists so the test harness can run both applications on
+ * ports of its choosing. Accepting an arbitrary origin from the URL would be a
+ * hole: anyone could send a link that pointed the vault at a site they control
+ * and harvest the grant. So the override is refused unless it is localhost, and
+ * refused entirely off localhost.
+ *
+ * @param {string} value
+ * @returns {boolean}
+ */
+export function isLocalOrigin(value) {
+  try {
+    const url = new URL(value);
+    return (
+      (url.protocol === 'http:' || url.protocol === 'https:') &&
+      (url.hostname === 'localhost' || url.hostname === '127.0.0.1') &&
+      url.pathname === '/' &&
+      url.search === '' &&
+      url.hash === ''
+    );
+  } catch {
+    return false;
+  }
+}
+
+/**
+ * A localhost-only origin override, read from `?vault=` or `?host=`.
+ *
+ * @param {'vault' | 'host'} which
+ * @returns {string | null}
+ */
+function override(which) {
+  if (!isLocal()) return null;
+  const raw = new URLSearchParams(globalThis.location?.search ?? '').get(which);
+  if (raw === null) return null;
+  const value = raw.replace(/\/$/, '') + '/';
+  return isLocalOrigin(value) ? value.replace(/\/$/, '') : null;
+}
+
 /** @returns {string} the vault origin for the current environment */
 export function vaultOrigin() {
-  return isLocal() ? VAULT_ORIGIN_DEV : VAULT_ORIGIN_PROD;
+  return override('vault') ?? (isLocal() ? VAULT_ORIGIN_DEV : VAULT_ORIGIN_PROD);
 }
 
 /** @returns {string} the letting agent origin for the current environment */
 export function hostOrigin() {
-  return isLocal() ? HOST_ORIGIN_DEV : HOST_ORIGIN_PROD;
+  return override('host') ?? (isLocal() ? HOST_ORIGIN_DEV : HOST_ORIGIN_PROD);
 }
 
 /**

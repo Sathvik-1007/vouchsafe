@@ -239,7 +239,20 @@ function wireEvents() {
 
 async function boot() {
   renderStatus();
-  $('vault-frame').src = vaultOrigin();
+  // Tell the vault which origin embedded it. Cross-origin WebMCP is symmetric:
+  // the vault must name this origin in `exposedTo` for anything to cross, and it
+  // cannot learn that from its own URL.
+  //
+  // `location.origin` and not `hostOrigin()`. The configured value is a default
+  // for whoever needs to *refer* to this site; the page itself knows where it is
+  // actually running, and the two differ the moment it is served from anywhere
+  // but the expected port. Naming the wrong origin here silently exposes nothing
+  // at all, with no error on either side.
+  //
+  // In production the vault ignores this parameter, because its override accepts
+  // localhost only, so a crafted link cannot redirect a grant at an origin the
+  // person did not choose.
+  $('vault-frame').src = vaultOrigin() + '?host=' + encodeURIComponent(location.origin);
   wireEvents();
 
   await registerHostTools({
