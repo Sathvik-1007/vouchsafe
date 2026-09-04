@@ -74,6 +74,15 @@ function renderGraph() {
  * that are true: one cell per bedroom, filled up to the occupancy limit.
  */
 function renderListings() {
+  // Counted, not written. The copy said "three" for some time after there were
+  // five, which is the kind of small lie that makes a reader doubt the numbers
+  // that matter.
+  const count = LISTINGS.length;
+  const words = ['no', 'one', 'two', 'three', 'four', 'five', 'six', 'seven', 'eight'];
+  $('listings-lede').textContent =
+    (words[count] ?? String(count)) + ' propert' + (count === 1 ? 'y' : 'ies') +
+    ' in south Manchester. Each one asks for something slightly different.';
+
   $('listings').innerHTML = LISTINGS.map((l) => {
     const active = l.id === activeListing;
     const cells = Math.max(l.bedrooms, 4);
