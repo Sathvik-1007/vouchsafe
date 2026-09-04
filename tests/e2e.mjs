@@ -26,10 +26,19 @@ import { tmpdir } from 'node:os';
 import { fileURLToPath } from 'node:url';
 
 const ROOT = fileURLToPath(new URL('..', import.meta.url));
-const VAULT_PORT = 4401;
-const HOST_PORT = 4402;
-const VAULT_ORIGIN = `http://localhost:${VAULT_PORT}`;
-const HOST_ORIGIN = `http://localhost:${HOST_PORT}`;
+/**
+ * The static servers take whatever ports are free, like the debugging port.
+ *
+ * Fixed ports meant an interrupted run left its servers holding 4401 and 4402,
+ * and the next run died on EADDRINUSE before printing a single result. Nothing
+ * in the suite needs a particular number: both applications learn each other's
+ * origin from a query parameter, which exists precisely so they can be served
+ * anywhere.
+ *
+ * Assigned in `main`.
+ */
+let VAULT_ORIGIN = '';
+let HOST_ORIGIN = '';
 /**
  * The debugging port is chosen at run time, never fixed.
  *
@@ -70,7 +79,7 @@ const MIME = {
  * @param {number} port
  * @returns {Promise<import('node:http').Server>}
  */
-function serve(dir, port) {
+function serve(dir) {
   const root = join(ROOT, dir);
   const server = createHttpServer(async (req, res) => {
     const rel = normalize(decodeURIComponent(req.url.split('?')[0])).replace(/^(\.\.[/\\])+/, '');
@@ -86,19 +95,15 @@ function serve(dir, port) {
     }
   });
   return new Promise((resolve, reject) => {
-    // Without this the suite hangs forever printing nothing. `listen` reports a
-    // bound port by emitting 'error', not by rejecting, so an unhandled one
-    // leaves the promise pending and the run looks like a blank terminal rather
-    // than a failure with a cause.
-    server.once('error', (err) => {
-      reject(new Error(
-        err.code === 'EADDRINUSE'
-          ? `port ${port} is already in use, probably by an earlier run that did not shut down. ` +
-            `Free it with: fuser -k ${port}/tcp`
-          : `could not serve ${dir} on ${port}: ${err.message}`
-      ));
+    // `listen` reports a failure by emitting 'error', not by rejecting, so an
+    // unhandled one leaves this promise pending and the run looks like a blank
+    // terminal rather than a failure with a cause.
+    server.once('error', (err) => reject(new Error(`could not serve ${dir}: ${err.message}`)));
+    // Port 0 asks the kernel for one nobody is using.
+    server.listen(0, '127.0.0.1', () => {
+      server.origin = `http://localhost:${server.address().port}`;
+      resolve(server);
     });
-    server.listen(port, () => resolve(server));
   });
 }
 
@@ -345,7 +350,11 @@ async function main() {
   // Announced before anything slow happens. A suite that prints nothing for its
   // first thirty seconds is indistinguishable from one that has hung.
   console.log('\nBureau end-to-end');
-  const servers = [await serve('vault', VAULT_PORT), await serve('host', HOST_PORT)];
+  const vaultServer = await serve('vault');
+  const hostServer = await serve('host');
+  VAULT_ORIGIN = vaultServer.origin;
+  HOST_ORIGIN = hostServer.origin;
+  const servers = [vaultServer, hostServer];
   console.log(`  serving ${VAULT_ORIGIN} and ${HOST_ORIGIN}`);
   console.log('  launching a browser with WebMCP enabled…');
   const browser = await Browser.launch();

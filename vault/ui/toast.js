@@ -68,8 +68,14 @@ export function notify(message, options = {}) {
   const tone = options.tone ?? 'good';
   const host = ensureStack();
 
-  while (host.children.length >= MAX_STACKED) {
-    retire(host.firstElementChild);
+  // Removed outright, not retired. `retire` waits for an animation before it
+  // takes the element out, so looping on `children.length` never terminates:
+  // the count does not drop, the condition stays true, and the page locks up on
+  // the fifth message. Making room is not the same act as dismissing, and it
+  // does not get an exit animation.
+  const standing = () => [...host.children].filter((el) => el.dataset.leaving !== 'yes');
+  for (let queue = standing(); queue.length >= MAX_STACKED; queue = standing()) {
+    queue[0].remove();
   }
 
   const toast = document.createElement('div');
