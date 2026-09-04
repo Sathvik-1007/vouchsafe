@@ -22,6 +22,7 @@
 
 import { readFacts, writeFact, SEED_FACTS, errText } from './facts.js';
 import { PREDICATES, findPredicate } from './predicates.js';
+import { compareDisclosure, counterfactualFor } from './counterfactual.js';
 import {
   readGrants,
   grant,
@@ -421,6 +422,51 @@ export async function registerManagementTools() {
       run: (args) => {
         const result = writeFact(String(args.key ?? ''), args.value);
         return result.ok ? 'Updated ' + args.key : 'Error: ' + result.error;
+      },
+    },
+    {
+      name: 'vault_compare_disclosure',
+      description:
+        'Compare what the current permissions reveal against the documents a letting agent would ordinarily demand to answer the same questions. Use when the applicant asks whether this is actually safer.',
+      inputSchema: { type: 'object', properties: {}, required: [] },
+      readOnly: true,
+      run: () => {
+        const granted = Object.values(readGrants()).flat();
+        if (granted.length === 0) return 'Nothing is granted, so nothing has been disclosed.';
+        const c = compareDisclosure(granted);
+        return [
+          'Answered by permission: ' + c.predicateBits + ' bits across ' + c.predicateBits + ' yes-or-no answers.',
+          'Avoided by not uploading: ' + c.documents.join('; ') + '.',
+          'That is ' + c.extraFacts + ' facts about you that were never asked for and never handed over, roughly ' + c.documentBits + ' bits, about ' + c.ratio + ' times the disclosure.',
+        ].join('\n');
+      },
+    },
+    {
+      name: 'vault_explain_permission',
+      description:
+        'Explain in plain language what granting one permission does and does not reveal, and which document it saves the applicant from uploading.',
+      inputSchema: {
+        type: 'object',
+        properties: {
+          predicate: { type: 'string', description: 'Name of the permission to explain.' },
+        },
+        required: ['predicate'],
+      },
+      readOnly: true,
+      run: (args) => {
+        const name = String(args.predicate ?? '');
+        const p = findPredicate(name);
+        if (!p) return 'Error: no such permission "' + name + '"';
+        const lines = [
+          p.title + ' (' + p.name + '), ' + p.disclosureBits + ' bit' + (p.disclosureBits === 1 ? '' : 's'),
+          'Reveals: ' + p.reveals,
+        ];
+        const c = counterfactualFor(name);
+        if (c) {
+          lines.push('Replaces: ' + c.document + '.');
+          lines.push('Which would also have revealed: ' + c.alsoReveals.join(', ') + '.');
+        }
+        return lines.join('\n');
       },
     },
     {

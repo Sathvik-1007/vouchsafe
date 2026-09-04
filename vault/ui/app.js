@@ -23,6 +23,7 @@ import {
   clearLedger,
   isGranted,
 } from '../lib/grants.js';
+import { compareDisclosure } from '../lib/counterfactual.js';
 import {
   sync,
   registerManagementTools,
@@ -190,6 +191,55 @@ function renderDisclosure() {
   $('bits-explain').textContent = verdict;
 }
 
+/**
+ * Draw the comparison between what was granted and what would have been uploaded.
+ *
+ * This is the panel that makes "one bit" mean something. A number without its
+ * alternative beside it is not information, it is decoration.
+ */
+function renderCounterfactual() {
+  const granted = readGrants()[selected] ?? [];
+  const box = $('counterfactual');
+
+  if (granted.length === 0) {
+    box.innerHTML =
+      '<p class="note" style="margin:0">Grant something and this will show the documents ' +
+      'you would otherwise have uploaded to answer the same questions.</p>';
+    return;
+  }
+
+  const c = compareDisclosure(granted);
+  if (c.documents.length === 0) {
+    box.innerHTML =
+      '<p class="note" style="margin:0">These grants are raw disclosures. There is no document ' +
+      'they save you from, because they hand over the contents directly.</p>';
+    return;
+  }
+
+  box.innerHTML =
+    '<div style="display:flex;gap:18px;align-items:baseline;flex-wrap:wrap;margin-bottom:10px">' +
+    '<div><div class="big" style="color:var(--live)">' + c.predicateBits + '</div>' +
+    '<div class="note">bits you gave</div></div>' +
+    '<div style="color:var(--ink-faint);font-size:20px">vs</div>' +
+    '<div><div class="big" style="color:var(--deny)">' + c.documentBits + '</div>' +
+    '<div class="note">bits the documents would have</div></div>' +
+    '<div style="margin-left:auto;text-align:right"><div class="big">' + c.ratio + '&times;</div>' +
+    '<div class="note">less disclosed</div></div>' +
+    '</div>' +
+    '<p style="margin:0 0 8px">Still on your side of the boundary: <strong>' + c.extraFacts +
+    ' facts</strong> nobody asked for.</p>' +
+    '<ul class="reset" style="font-size:12.5px">' +
+    c.documents
+      .map(
+        (d) =>
+          '<li style="padding:5px 0;border-bottom:1px solid var(--line);color:var(--ink-dim)">' +
+          '<span style="color:var(--deny);font-family:var(--mono);font-size:11px">not sent</span> ' +
+          esc(d) + '</li>'
+      )
+      .join('') +
+    '</ul>';
+}
+
 /** Draw the list of tools actually registered on document.modelContext. */
 function renderLiveTools() {
   const names = liveToolNames();
@@ -288,6 +338,7 @@ function renderFacts() {
 function renderAll() {
   renderPredicates();
   renderDisclosure();
+  renderCounterfactual();
   renderLiveTools();
   renderLedger();
 }
@@ -381,6 +432,17 @@ async function boot() {
   // just from a click, so the view subscribes rather than assuming it caused
   // every change itself.
   onRegistryChange(renderAll);
+
+  // The vault is open twice: standalone in its own tab, and embedded in the
+  // letting agent's page. They are the same origin and share one grant record,
+  // so a revocation in either must reach the other. `storage` fires only in the
+  // *other* documents of an origin, which is exactly the wiring needed.
+  window.addEventListener('storage', (event) => {
+    if (event.key !== null && !String(event.key).startsWith('bureau.')) return;
+    sync()
+      .then(renderAll)
+      .catch((err) => console.error('[vault] cross-tab sync failed:', err));
+  });
 
   await registerManagementTools();
   await sync();
