@@ -4,10 +4,10 @@ Two origins. The browser is the trust boundary.
 
     ┌─────────────────────────────┐        ┌──────────────────────────────┐
     │  VAULT ORIGIN               │        │  HOST ORIGIN (a letting site)│
-    │  bureau-vault.vercel.app    │        │  bureau-let.vercel.app       │
+    │  bureau-vault.vercel.app    │        │  bureau-lettings.vercel.app       │
     │                             │        │                              │
     │  facts live here, in        │        │  knows nothing about you     │
-    │  IndexedDB, never sent      │        │  until you grant a predicate │
+    │  localStorage, never sent      │        │  until you grant a predicate │
     │  anywhere                   │        │                              │
     │                             │        │                              │
     │  registerTool(pred, {       │        │  getTools({fromOrigins:[     │
@@ -23,7 +23,7 @@ Two origins. The browser is the trust boundary.
 
 ## Why the proxy layer exists
 
-Measured, not assumed (see tests/federation.spike.md): a host document's own
+Measured, not assumed (see docs/CHROME-FINDINGS.md): a host document's own
 `getTools()` does NOT include tools registered by a cross-origin iframe, even one
 carrying `allow="tools"`. Cross-origin tools surface only via
 `getTools({fromOrigins:[...]})`, which an external agent does not call on our behalf.

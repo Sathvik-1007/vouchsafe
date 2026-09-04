@@ -9,6 +9,7 @@
  * followed by `sync()` so the browser's registry and the screen never disagree.
  */
 
+import { COMMIT, BUILT_AT } from '../build.js';
 import {
   SEED_FACTS,
   APPLICANTS,
@@ -108,6 +109,8 @@ function renderStatus() {
   pill.textContent = available ? 'Ready for your assistant' : 'Your browser cannot do this yet';
   pill.className = 'tag ' + (available ? 'live' : 'off');
   $('origin-label').textContent = location.origin;
+  // So a reader can match what is running to what is in the repository.
+  $('build-stamp').textContent = COMMIT + ' \u00b7 ' + BUILT_AT;
 
   if (available) return;
   $('notice-slot').innerHTML =

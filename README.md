@@ -2,22 +2,52 @@
 
 **The letting agent gets an answer, not your life.**
 
-To rent a flat in Britain you upload your payslips, your bank statements and your
-passport to six letting agents, who keep them forever. None of them wanted your
-salary. They wanted one bit: *is annual income at least three times annual rent,
-yes or no.*
+- **Try it:** <https://bureau-lettings.vercel.app>
+- **Check it yourself:** <https://bureau-lettings.vercel.app/proof.html> reads the
+  browser's own tool registry, live, on both origins
+- **Video:** VIDEO_URL
+- **Tool contract:** [TOOLS.md](TOOLS.md) &middot; **Licence:** MIT &middot; 108 tests, no runtime dependencies
+
+To rent a flat in Britain you upload your payslips, your bank statements and
+your passport to six letting agents, who keep them forever. None of them wanted
+your salary. They wanted one bit: is annual income at least three times annual
+rent, yes or no.
 
 Bureau is that bit. Your facts live on your own origin and never leave your
-browser. A letting agent's site borrows the *capability to ask*, gets back a
-word, and holds nothing. Withdraw the permission and the tool disappears from
-the agent's hands mid-conversation.
+browser. A letting agent borrows the *capability to ask*, gets back a word, and
+holds nothing.
 
-Built for the [OpenAI WebMCP Challenge](https://webmcp.devpost.com/).
+## Ask it something
 
-- **Live:** <https://bureau-lettings.vercel.app> — open in ChatGPT's browser, or Chrome 149+
-- **Your vault:** <https://bureau-vault.vercel.app> (embedded in the page above; this is the standalone console)
-- **Video:** VIDEO_URL
-- **Licence:** MIT
+Open the live URL in ChatGPT's browser (⌘⇧B, then Settings, Browser,
+Permissions, Enable site tools), or in Chrome 149+ with the
+[Model Context Tool Inspector](https://chromewebstore.google.com/detail/gbpdfapgefenggkahomfgkhfehlcenpd).
+Then, in this order:
+
+> **"What have you got, and would I qualify for the Wilbraham Road flat?"**
+
+It will tell you it cannot check anything yet, and name what it needs. Allow the
+nine questions in the panel on the right, then ask again. Nine cross-origin
+calls, nine one-word answers, no documents.
+
+> **"What do you actually know about me?"**
+
+*"Stored about the applicant: nothing."*
+
+Now the part worth watching. Press **Withdraw** on *Does your income cover the
+rent?* and ask it to check again:
+
+> **"Check the Wilbraham Road flat again."**
+
+The tool is gone from its list mid-conversation. Not refused. **Gone.** Authority
+here is enforced by whether the tool exists, not by a permission check inside
+it, so a withheld question cannot be called, guessed at, or talked into
+existence by anything written into a page or a prompt.
+
+There are three sample applicants in the file panel. Ama qualifies for the
+Chorlton flat, Dele only for the Old Trafford studio, Priya only for the Whalley
+Range terrace, and the Ducie Street conversion suits nobody. Switch between them
+to see a yes, a no and a not-yet without editing a field.
 
 ---
 
@@ -33,6 +63,11 @@ That makes three things possible that a single origin cannot do:
 
 **Data that answers without being sent.** The vault holds an income. The letting
 agent can learn whether it clears a threshold and can never learn what it is.
+
+**Authority is tool existence, not a permission check.** Before you allow a
+question there is no tool to call, so there is nothing for a prompt injection to
+talk into running. This is the property `exposedTo` gives you and a server-side
+permission flag cannot.
 
 **Consent you can withdraw and watch die.** Revoking aborts the vault's
 `AbortController`. That fires `toolchange` in the letting agent's document, its
@@ -58,7 +93,7 @@ site tools*. Then ask:
 - Now press **revoke** on `income_meets_multiple` in the vault panel, and ask it
   to check again. Watch the tool go missing.
 
-**No agent at all?** Press **Play the guided demo** on the live site. It runs the
+**No agent at all?** Press **Watch how it works** on the live site. It runs the
 whole argument in about forty seconds, against both real origins, calling the
 same tools an agent would. Nothing is faked or replayed, so if federation were
 broken the demo would visibly fail.
@@ -77,7 +112,7 @@ URL, and use *DevTools → Application → WebMCP* to call every tool by hand. T
 ```sh
 git clone https://github.com/Sathvik-1007/bureau-webmcp
 cd bureau-webmcp
-npm test          # 97 tests: 58 unit, 39 in a real browser
+npm test          # 108 tests: 58 unit, 50 in a real browser
 ./tools/serve.sh  # two origins, :4001 and :4002
 ```
 
@@ -256,7 +291,7 @@ stop every one.
 ## Tests
 
 ```sh
-npm test    # 97 tests, 0 failures
+npm test    # 108 tests, 0 failures
 ```
 
 **58 unit tests** cover threshold behaviour at the exact boundary, calendar-month
@@ -265,7 +300,7 @@ enforcement, tampered-record recovery, disclosure arithmetic, verdict parsing
 that is not fooled by a clause containing the opposite word, and the schema
 normalisation federation depends on.
 
-**39 end-to-end tests** drive a real Chromium with WebMCP, serve both origins,
+**50 end-to-end tests** drive a real Chromium with WebMCP, serve both origins,
 and click every control. They assert on three surfaces that can disagree, and a
 bug that matters here is exactly a disagreement between them: the DOM, the
 browser's own tool registry, and what the *other* origin can see across the

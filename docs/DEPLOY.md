@@ -6,7 +6,7 @@ simply the fastest way to get two HTTPS origins with no DNS work.
 
 ```sh
 ./tools/sync-config.sh          # copy the origin map into both app roots
-npm test                        # 58 tests
+npm test                        # 108 tests
 
 vercel deploy vault --prod --yes --name bureau-vault
 vercel deploy host  --prod --yes --name bureau-lettings

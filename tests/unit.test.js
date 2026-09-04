@@ -6,7 +6,7 @@
  * schema normalisation that federation depends on.
  *
  * The browser-dependent half, tool registration and cross-origin discovery, is
- * covered by `tests/federation.e2e.mjs`, which drives a real Chromium.
+ * covered by `tests/e2e.mjs`, which drives a real Chromium.
  *
  * Run with: node --test tests/
  */

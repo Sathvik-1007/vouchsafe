@@ -11,7 +11,7 @@ vault panel are both readable. Close other tabs. Hide bookmarks bar.
 1. Open `https://bureau-lettings.vercel.app` in Brave or Chrome 149+ with WebMCP
    enabled (`chrome://flags/#enable-webmcp-testing`, or the launch flag
    `--enable-features=WebMCP`).
-2. In the vault panel on the right, tick **"Let the guided demo drive these
+2. In the vault panel on the right, tick **"Let the walkthrough use these
    switches"**.
 3. Scroll so the capability graph and the vault panel are both on screen.
 4. Do **not** press play yet.
@@ -40,7 +40,7 @@ vault panel are both readable. Close other tabs. Hide bookmarks bar.
 
 ## 0:30 - 1:05  The grant, and the money shot
 
-*(press **Play the guided demo**)*
+*(press **Watch how it works**)*
 
 > "I grant nine permissions. Watch the graph."
 

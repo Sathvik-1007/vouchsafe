@@ -9,6 +9,7 @@
  * call, and this page can only discover the answer by asking and being refused.
  */
 
+import { COMMIT, BUILT_AT } from '../build.js';
 import { LISTINGS, findListing, depositFor } from '../lib/listings.js';
 import { discover, watchForChanges, federationState, onFederationChange, webmcpAvailable, federatedHandles, PROXY_PREFIX } from '../lib/federation.js';
 import { assess, summarise, resultsFor, clearResults } from '../lib/assessment.js';
@@ -39,6 +40,8 @@ function renderStatus() {
   pill.textContent = available ? 'Ready for your assistant' : 'Your browser cannot do this yet';
   pill.className = 'tag ' + (available ? 'live' : 'off');
   $('origin-label').textContent = location.origin;
+  // So a reader can match what is running to what is in the repository.
+  $('build-stamp').textContent = COMMIT + ' \u00b7 ' + BUILT_AT;
 
   if (available) return;
   $('notice-slot').innerHTML =

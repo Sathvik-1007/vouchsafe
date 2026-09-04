@@ -17,6 +17,7 @@
  * the browser directly, with no agent, no extension and no console.
  */
 
+import { COMMIT, BUILT_AT } from '../build.js';
 import { vaultOrigin, hostOrigin } from '../config.js';
 import { escapeHtml as esc, errText } from '../lib/util.js';
 
@@ -189,6 +190,7 @@ async function boot() {
   pill.textContent = available() ? 'Reading the registry' : 'Your browser cannot do this yet';
   pill.className = 'tag ' + (available() ? 'live' : 'off');
   $('build-label').textContent = location.origin;
+  $('build-stamp').textContent = COMMIT + ' \u00b7 ' + BUILT_AT;
 
   if (!available()) {
     $('notice-slot').innerHTML =
