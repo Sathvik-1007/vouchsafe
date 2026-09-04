@@ -8,8 +8,8 @@ simply the fastest way to get two HTTPS origins with no DNS work.
 ./tools/sync-config.sh          # copy the origin map into both app roots
 npm test                        # 117 tests
 
-vercel deploy vault --prod --yes --name bureau-vault
-vercel deploy host  --prod --yes --name bureau-lettings
+vercel deploy vault --prod --yes --name vouchsafe-vault
+vercel deploy host  --prod --yes --name vouchsafe-lettings
 ```
 
 Then set the two production URLs in `shared-config.js` and re-run

@@ -44,8 +44,8 @@ import { promisify } from 'node:util';
 
 const run = promisify(execFile);
 
-const HOST = 'https://bureau-lettings.vercel.app';
-const VAULT = 'https://bureau-vault.vercel.app';
+const HOST = 'https://vouchsafe-lettings.vercel.app';
+const VAULT = 'https://vouchsafe-vault.vercel.app';
 const PROOF = HOST + '/proof.html';
 
 const WIDTH = 1920;

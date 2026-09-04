@@ -18,10 +18,10 @@ import { findPredicate } from './predicates.js';
 import { knownOrigins } from '../config.js';
 
 /** Storage key for the grant set. */
-const GRANTS_KEY = 'bureau.grants.v1';
+const GRANTS_KEY = 'vouchsafe.grants.v1';
 
 /** Storage key for the audit ledger. */
-const LEDGER_KEY = 'bureau.ledger.v1';
+const LEDGER_KEY = 'vouchsafe.ledger.v1';
 
 /**
  * Entries retained in the audit ledger.

@@ -127,7 +127,7 @@ function askVault(action, predicate) {
       // Origin before payload. A reply that did not come from the vault is not
       // a reply.
       if (event.origin !== target) return;
-      if (event.data?.source !== 'bureau-vault') return;
+      if (event.data?.source !== 'vouchsafe-vault') return;
       clearTimeout(timer);
       window.removeEventListener('message', onReply);
       resolve(
@@ -140,7 +140,7 @@ function askVault(action, predicate) {
     window.addEventListener('message', onReply);
     // Targeted, not "*", so the message cannot be read by whatever else the
     // frame might navigate to.
-    frame.contentWindow.postMessage({ source: 'bureau-demo', action, predicate }, target);
+    frame.contentWindow.postMessage({ source: 'vouchsafe-demo', action, predicate }, target);
   });
 }
 

@@ -732,7 +732,7 @@ let demoArmed = false;
  */
 function replyToHost(event, ok) {
   event.source?.postMessage(
-    { source: 'bureau-vault', ok, granted: (readGrants()[selected] ?? []).length },
+    { source: 'vouchsafe-vault', ok, granted: (readGrants()[selected] ?? []).length },
     event.origin
   );
 }
@@ -740,7 +740,7 @@ function replyToHost(event, ok) {
 function listenForDemoRequests() {
   window.addEventListener('message', async (event) => {
     if (event.origin !== hostOrigin()) return;
-    if (event.data?.source !== 'bureau-demo') return;
+    if (event.data?.source !== 'vouchsafe-demo') return;
 
     if (!demoArmed) {
       replyToHost(event, false);
@@ -813,7 +813,7 @@ async function boot() {
   // page. They share one grant record, so a change in either must reach the
   // other. `storage` fires only in the *other* documents of an origin.
   window.addEventListener('storage', (event) => {
-    if (event.key !== null && !String(event.key).startsWith('bureau.')) return;
+    if (event.key !== null && !String(event.key).startsWith('vouchsafe.')) return;
     sync().then(renderAll).catch((err) => console.error('[vault] cross-tab sync failed:', err));
   });
 

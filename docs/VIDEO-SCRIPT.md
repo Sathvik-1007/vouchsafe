@@ -8,7 +8,7 @@ vault panel are both readable. Close other tabs. Hide bookmarks bar.
 
 ## Setup before you hit record
 
-1. Open `https://bureau-lettings.vercel.app` in Brave or Chrome 149+ with WebMCP
+1. Open `https://vouchsafe-lettings.vercel.app` in Brave or Chrome 149+ with WebMCP
    enabled (`chrome://flags/#enable-webmcp-testing`, or the launch flag
    `--enable-features=WebMCP`).
 2. In the vault panel on the right, tick **"Let the walkthrough use these

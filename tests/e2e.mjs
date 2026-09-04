@@ -133,7 +133,7 @@ class Browser {
     const bin = BROWSERS.find((b) => existsSync(b));
     if (!bin) throw new Error('no Chromium found; set BROWSER=/path/to/chrome');
     debugPort = await Browser.freePort();
-    const profile = await mkdtemp(join(tmpdir(), 'bureau-e2e-'));
+    const profile = await mkdtemp(join(tmpdir(), 'vouchsafe-e2e-'));
     const proc = spawn(bin, [
       '--enable-features=WebMCP',
       '--enable-blink-features=WebMCP',
@@ -675,7 +675,7 @@ async function main() {
   await check('the vault cannot be driven by the host until armed', async () => {
     await browser.evalIn(HOST_ORIGIN,
       `document.getElementById('vault-frame').contentWindow.postMessage(
-         {source:'bureau-demo',action:'grant-typical'}, '${VAULT_ORIGIN}')`);
+         {source:'vouchsafe-demo',action:'grant-typical'}, '${VAULT_ORIGIN}')`);
     await sleep(900);
     eq(await textIn(VAULT_ORIGIN, '#bits-total'), '0', 'an unarmed vault granted on request');
   });

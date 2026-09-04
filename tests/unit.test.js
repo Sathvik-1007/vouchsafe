@@ -78,7 +78,7 @@ test('readFacts returns the seed record before anything is written', () => {
 });
 
 test('readFacts survives a corrupted record rather than throwing', () => {
-  localStorage.setItem('bureau.facts.v1', '{not json');
+  localStorage.setItem('vouchsafe.facts.v1', '{not json');
   assert.equal(readFacts().annualIncomeGbp, 41400);
   resetFacts();
 });
@@ -237,14 +237,14 @@ test('revokeAll clears every grant and reports the count', () => {
 
 test('a stale grant naming a predicate that no longer exists is dropped on read', () => {
   localStorage.clear();
-  localStorage.setItem('bureau.grants.v1', JSON.stringify({ [HOST]: ['predicate_from_2025'] }));
+  localStorage.setItem('vouchsafe.grants.v1', JSON.stringify({ [HOST]: ['predicate_from_2025'] }));
   assert.equal(readGrants()[HOST], undefined);
 });
 
 test('a grant to an insecure origin is dropped on read even if it was persisted', () => {
   localStorage.clear();
   localStorage.setItem(
-    'bureau.grants.v1',
+    'vouchsafe.grants.v1',
     JSON.stringify({ 'http://evil.example.com': ['income_meets_multiple'] })
   );
   assert.deepEqual(readGrants(), {});

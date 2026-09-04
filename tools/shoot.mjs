@@ -45,7 +45,7 @@ if (!bin) {
 }
 
 const port = await freePort();
-const profile = await mkdtemp(join(tmpdir(), 'bureau-shot-'));
+const profile = await mkdtemp(join(tmpdir(), 'vouchsafe-shot-'));
 const proc = spawn(bin, [
   '--headless=new',
   '--enable-features=WebMCP',

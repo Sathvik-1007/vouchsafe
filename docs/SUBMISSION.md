@@ -192,7 +192,7 @@ where the domain can absorb being occasionally wrong.
 
 ## Try it out
 
-- https://bureau-lettings.vercel.app
-- https://bureau-lettings.vercel.app/proof.html
-- https://bureau-vault.vercel.app
-- https://github.com/Sathvik-1007/bureau-webmcp
+- https://vouchsafe-lettings.vercel.app
+- https://vouchsafe-lettings.vercel.app/proof.html
+- https://vouchsafe-vault.vercel.app
+- https://github.com/Sathvik-1007/vouchsafe

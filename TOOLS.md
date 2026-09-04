@@ -8,7 +8,7 @@ entirely on what the person has allowed.
 
 ## The applicant's file, exposed across the origin boundary
 
-Registered on `bureau-vault.vercel.app` with an `exposedTo` naming the letting
+Registered on `vouchsafe-vault.vercel.app` with an `exposedTo` naming the letting
 agent, and only while the permission is allowed. Withdraw one and it is not a
 guarded tool that refuses, it is absent.
 
@@ -58,7 +58,7 @@ reach them however many permissions it holds. This is what lets someone say
 
 ## The letting agent's own tools
 
-Registered on `bureau-lettings.vercel.app`. These describe the property. None of
+Registered on `vouchsafe-lettings.vercel.app`. These describe the property. None of
 them describe the applicant, because this origin holds nothing about them.
 
 | Tool | What it does | Read only |

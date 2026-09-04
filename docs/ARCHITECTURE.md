@@ -4,7 +4,7 @@ Two origins. The browser is the trust boundary.
 
     ┌─────────────────────────────┐        ┌──────────────────────────────┐
     │  VAULT ORIGIN               │        │  HOST ORIGIN (a letting site)│
-    │  bureau-vault.vercel.app    │        │  bureau-lettings.vercel.app       │
+    │  vouchsafe-vault.vercel.app    │        │  vouchsafe-lettings.vercel.app       │
     │                             │        │                              │
     │  facts live here, in        │        │  knows nothing about you     │
     │  localStorage, never sent      │        │  until you grant a predicate │

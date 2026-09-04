@@ -29,9 +29,9 @@ import { tmpdir } from 'node:os';
 const PORT = 9411;
 
 const DEFAULT_TARGETS = [
-  'https://bureau-lettings.vercel.app/',
-  'https://bureau-lettings.vercel.app/proof.html',
-  'https://bureau-vault.vercel.app/',
+  'https://vouchsafe-lettings.vercel.app/',
+  'https://vouchsafe-lettings.vercel.app/proof.html',
+  'https://vouchsafe-vault.vercel.app/',
 ];
 
 const BROWSERS = [
@@ -76,7 +76,7 @@ async function main() {
     process.exit(2);
   }
 
-  const profile = await mkdtemp(join(tmpdir(), 'bureau-verify-'));
+  const profile = await mkdtemp(join(tmpdir(), 'vouchsafe-verify-'));
   const proc = spawn(bin, [
     '--enable-features=WebMCP',
     `--remote-debugging-port=${PORT}`,

@@ -3,12 +3,12 @@
 [![licence: MIT](https://img.shields.io/badge/licence-MIT-1a1c19)](LICENSE)
 [![tests: 117 passing](https://img.shields.io/badge/tests-117%20passing-4c2a85)](tests/)
 [![runtime dependencies: none](https://img.shields.io/badge/runtime%20dependencies-none-1a1c19)](package.json)
-[![live](https://img.shields.io/badge/live-bureau--lettings.vercel.app-4c2a85)](https://bureau-lettings.vercel.app)
+[![live](https://img.shields.io/badge/live-vouchsafe--lettings.vercel.app-4c2a85)](https://vouchsafe-lettings.vercel.app)
 
 **The letting agent gets an answer, not your life.**
 
-Try it at <https://bureau-lettings.vercel.app>. If you would rather not take any
-of this on trust, <https://bureau-lettings.vercel.app/proof.html> reads the
+Try it at <https://vouchsafe-lettings.vercel.app>. If you would rather not take any
+of this on trust, <https://vouchsafe-lettings.vercel.app/proof.html> reads the
 browser's own tool registry, live, on both origins, and lets you watch a
 permission stop existing. **It registers nothing itself, which is what makes it
 a witness rather than a participant.**
@@ -125,8 +125,8 @@ URL, and use *DevTools → Application → WebMCP* to call every tool by hand. T
 **Locally:**
 
 ```sh
-git clone https://github.com/Sathvik-1007/bureau-webmcp
-cd bureau-webmcp
+git clone https://github.com/Sathvik-1007/vouchsafe
+cd vouchsafe
 npm test          # 117 tests: 65 unit, 52 in a real browser
 ./tools/serve.sh  # two origins, :4001 and :4002
 ```

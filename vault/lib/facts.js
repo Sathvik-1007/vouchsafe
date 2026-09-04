@@ -13,7 +13,7 @@
  */
 
 /** Storage key for the fact record. Namespaced so a future schema can migrate. */
-const FACTS_KEY = 'bureau.facts.v1';
+const FACTS_KEY = 'vouchsafe.facts.v1';
 
 /**
  * Ceiling on a stored string, in UTF-16 code units.

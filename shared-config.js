@@ -28,10 +28,10 @@ export function isLocal() {
 }
 
 /** Production origin of the vault. */
-export const VAULT_ORIGIN_PROD = 'https://bureau-vault.vercel.app';
+export const VAULT_ORIGIN_PROD = 'https://vouchsafe-vault.vercel.app';
 
 /** Production origin of the letting agent. */
-export const HOST_ORIGIN_PROD = 'https://bureau-lettings.vercel.app';
+export const HOST_ORIGIN_PROD = 'https://vouchsafe-lettings.vercel.app';
 
 /** Local development origin of the vault. */
 export const VAULT_ORIGIN_DEV = 'http://localhost:4001';

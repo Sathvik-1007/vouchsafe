@@ -1,5 +1,5 @@
 {
-  "name": "bureau",
+  "name": "vouchsafe",
   "version": "1.0.0",
   "private": true,
   "description": "A predicate vault for renting. The letting agent gets an answer, not your life. Built on WebMCP cross-origin tool federation.",
