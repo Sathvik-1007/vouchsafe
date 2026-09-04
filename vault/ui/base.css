@@ -814,7 +814,15 @@ hr.rule { border: 0; border-top: 1px solid var(--rule-soft); margin: 2rem 0; }
 
   .graph-frame::after {
     content: 'scroll to see the whole diagram';
+    /* Sticky, because this sits inside the element that scrolls. Left at
+       `display: block` it scrolled away with the diagram and the reader saw
+       "croll to see the whole diagram" the moment they moved it. Pinning it to
+       the left edge keeps the instruction legible while the thing it describes
+       moves underneath. */
+    position: sticky;
+    left: 0;
     display: block;
+    width: fit-content;
     font-size: var(--t-xs);
     color: #8d9386;
     padding-top: 0.4rem;

@@ -20,6 +20,7 @@
 
 import { spawn } from 'node:child_process';
 import { mkdtemp, rm } from 'node:fs/promises';
+import { once } from 'node:events';
 import { existsSync } from 'node:fs';
 import { join } from 'node:path';
 import { tmpdir } from 'node:os';
@@ -169,7 +170,12 @@ async function main() {
     }
   } finally {
     ws?.close();
-    try { process.kill(-proc.pid); } catch { /* already gone */ }
+    // SIGKILL, not the default SIGTERM. Chrome handles SIGTERM by shutting down
+    // gracefully, which means it writes to its profile after the delete below
+    // has run and the directory comes back. Five of them survived every run of
+    // this script, at roughly 100MB each against a 3.8G tmpfs.
+    try { process.kill(-proc.pid, 'SIGKILL'); } catch { /* already gone */ }
+    await once(proc, 'exit').catch(() => {});
     await rm(profile, { recursive: true, force: true }).catch(() => {});
   }
 
