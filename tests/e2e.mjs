@@ -477,6 +477,118 @@ async function main() {
     ok((await textIn(HOST_ORIGIN, '#graph-caption')).includes('Nothing yet'), 'caption did not reset');
   });
 
+  // ---- quality floor -------------------------------------------------------
+  console.log('\nquality floor');
+
+  await check('every control is reachable and labelled for a screen reader', async () => {
+    const problems = await browser.evalIn(HOST_ORIGIN, `(() => {
+      const bad = [];
+      for (const el of document.querySelectorAll('button, a[href], select, input')) {
+        const name = (el.getAttribute('aria-label') || el.textContent || el.value || '').trim();
+        if (!name) bad.push(el.tagName + '#' + (el.id || '?') + ' has no accessible name');
+        if (el.tabIndex < 0) bad.push(el.tagName + '#' + (el.id || '?') + ' is not focusable');
+      }
+      for (const img of document.querySelectorAll('svg[role="img"]')) {
+        if (!img.getAttribute('aria-label')) bad.push('svg has no aria-label');
+      }
+      return bad;
+    })()`);
+    eq(problems.length, 0, 'accessibility problems: ' + problems.join('; '));
+  });
+
+  await check('keyboard focus is visible, and reaches the controls', async () => {
+    // A programmatic .focus() does not satisfy :focus-visible in Chromium, so a
+    // test that calls it measures the wrong thing and passes or fails for the
+    // wrong reason. Press the key a person would press.
+    await browser.evalIn(HOST_ORIGIN, `document.body.focus()`);
+    /** @type {string[]} */
+    const seen = [];
+    for (let i = 0; i < 12; i += 1) {
+      await browser.send('Input.dispatchKeyEvent', {
+        type: 'rawKeyDown', windowsVirtualKeyCode: 9, code: 'Tab', key: 'Tab',
+      });
+      await browser.send('Input.dispatchKeyEvent', {
+        type: 'keyUp', windowsVirtualKeyCode: 9, code: 'Tab', key: 'Tab',
+      });
+      const state = await browser.evalIn(HOST_ORIGIN, `(() => {
+        const el = document.activeElement;
+        if (!el || el === document.body) return null;
+        const s = getComputedStyle(el);
+        return {
+          tag: el.tagName + '#' + (el.id || ''),
+          outline: s.outlineStyle + ' ' + s.outlineWidth,
+          matches: el.matches(':focus-visible'),
+        };
+      })()`);
+      if (state) seen.push(state);
+    }
+    ok(seen.length > 0, 'Tab reached no control at all');
+    const invisible = seen.filter((s) => s.matches && s.outline.startsWith('none'));
+    eq(invisible.length, 0,
+      'controls with keyboard focus but no outline: ' + invisible.map((s) => s.tag).join(', '));
+  });
+
+  await check('the page does not scroll sideways on a phone', async () => {
+    await browser.send('Emulation.setDeviceMetricsOverride', {
+      width: 390, height: 844, deviceScaleFactor: 2, mobile: true,
+    });
+    await sleep(700);
+    const overflow = await browser.evalIn(HOST_ORIGIN,
+      `document.documentElement.scrollWidth - document.documentElement.clientWidth`);
+    await browser.send('Emulation.clearDeviceMetricsOverride');
+    await sleep(400);
+    ok(overflow <= 1, 'horizontal overflow of ' + overflow + 'px at 390px wide');
+  });
+
+  await check('body text meets the contrast floor against the paper', async () => {
+    const ratio = await browser.evalIn(HOST_ORIGIN, `(() => {
+      const lum = (c) => {
+        const [r, g, b] = c.match(/\\d+/g).slice(0, 3).map(Number).map((v) => {
+          const x = v / 255;
+          return x <= 0.03928 ? x / 12.92 : Math.pow((x + 0.055) / 1.055, 2.4);
+        });
+        return 0.2126 * r + 0.7152 * g + 0.0722 * b;
+      };
+      const s = getComputedStyle(document.body);
+      const a = lum(s.color), b = lum(s.backgroundColor);
+      const [hi, lo] = a > b ? [a, b] : [b, a];
+      return Math.round(((hi + 0.05) / (lo + 0.05)) * 100) / 100;
+    })()`);
+    ok(ratio >= 4.5, 'body contrast is ' + ratio + ':1, below the 4.5:1 floor');
+  });
+
+  await check('motion is dropped when the viewer asks for less of it', async () => {
+    await browser.send('Emulation.setEmulatedMedia', {
+      features: [{ name: 'prefers-reduced-motion', value: 'reduce' }],
+    });
+    await sleep(400);
+    const animated = await browser.evalIn(VAULT_ORIGIN, `(() => {
+      const el = document.querySelector('.stamp') || document.querySelector('.redacted');
+      if (!el) return 'none';
+      el.classList.add('is-fresh', 'is-wiping');
+      return getComputedStyle(el).animationName;
+    })()`);
+    await browser.send('Emulation.setEmulatedMedia', { features: [] });
+    ok(animated === 'none', 'animation still runs under reduced motion: ' + animated);
+  });
+
+  await check('both typefaces actually loaded, so the design is what shipped', async () => {
+    const loaded = await browser.evalIn(HOST_ORIGIN,
+      `(async()=>{ await document.fonts.ready;
+         return [...document.fonts].map(f=>f.family+':'+f.status).sort(); })()`);
+    ok(loaded.some((f) => f.startsWith('Fraunces') && f.endsWith('loaded')), 'Fraunces did not load: ' + loaded.join(','));
+    ok(loaded.some((f) => f.startsWith('Public Sans') && f.endsWith('loaded')), 'Public Sans did not load: ' + loaded.join(','));
+  });
+
+  await check('neither origin requests anything from a third party', async () => {
+    const external = await browser.evalIn(HOST_ORIGIN, `(() =>
+      performance.getEntriesByType('resource')
+        .map(e => e.name)
+        .filter(u => !u.startsWith(location.origin) && !u.startsWith('data:') && !u.startsWith('${VAULT_ORIGIN}'))
+    )()`);
+    eq(external.length, 0, 'third-party requests: ' + external.join(', '));
+  });
+
   await check('no page logged an error or threw during any of that', async () => {
     const errors = browser.drainErrors();
     eq(errors.length, 0, 'console was not clean:\n        ' + errors.join('\n        '));

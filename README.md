@@ -77,7 +77,7 @@ URL, and use *DevTools → Application → WebMCP* to call every tool by hand. T
 ```sh
 git clone https://github.com/Sathvik-1007/bureau-webmcp
 cd bureau-webmcp
-npm test          # 58 tests
+npm test          # 97 tests: 58 unit, 39 in a real browser
 ./tools/serve.sh  # two origins, :4001 and :4002
 ```
 
@@ -256,14 +256,50 @@ stop every one.
 ## Tests
 
 ```sh
-npm test    # 58 tests, 0 failures
+npm test    # 97 tests, 0 failures
 ```
 
-Covering threshold behaviour at the exact boundary, calendar-month arithmetic,
-rejection of dates that `Date.parse` silently rolls, allowlist enforcement,
-tampered-record recovery, disclosure arithmetic, verdict parsing that is not
-fooled by a clause containing the opposite word, and the schema normalisation
-that federation depends on.
+**58 unit tests** cover threshold behaviour at the exact boundary, calendar-month
+arithmetic, rejection of dates that `Date.parse` silently rolls, allowlist
+enforcement, tampered-record recovery, disclosure arithmetic, verdict parsing
+that is not fooled by a clause containing the opposite word, and the schema
+normalisation federation depends on.
+
+**39 end-to-end tests** drive a real Chromium with WebMCP, serve both origins,
+and click every control. They assert on three surfaces that can disagree, and a
+bug that matters here is exactly a disagreement between them: the DOM, the
+browser's own tool registry, and what the *other* origin can see across the
+boundary. They also hold the quality floor: every control keyboard-reachable and
+named, focus visible under a real Tab press, no sideways scroll at 390px, body
+contrast above 4.5:1, motion dropped under `prefers-reduced-motion`, both
+typefaces actually loaded, and zero third-party requests from either origin.
+
+That suite found two real bugs on its first run, both invisible to unit tests:
+
+- the dev origins were hardcoded, so neither app could be served on another port;
+- the host told the vault to trust `hostOrigin()` rather than `location.origin`,
+  which differ the moment it is served anywhere unexpected. Naming the wrong
+  origin exposes nothing at all, with no error on either side. It is the worst
+  failure mode in this API and we had shipped an instance of it.
+
+## The design
+
+A letting reference is a document where everything about you is legible to a
+stranger. So the interface is that document with everything blacked out but the
+answer, and the redaction bar is the signature device rather than another panel
+border.
+
+Fraunces carries voice, Public Sans carries instruction, and both are
+self-hosted so neither origin makes a third-party request at runtime. The
+affirmative stamp is violet rather than green, because red and green as a pair
+collapse for red-green colour deficiency and a consent screen is the wrong place
+to encode meaning in that pair alone. There is one orchestrated motion, the
+redaction wipe and the stamp, played on change and dropped entirely under
+`prefers-reduced-motion`.
+
+Embedded in the letting agent's page the vault drops its explanatory sections
+rather than shrinking them, because the reader has already been told what it is
+by the page around it and needs the controls immediately.
 
 ## Layout
 

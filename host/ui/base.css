@@ -487,3 +487,66 @@ hr.rule { border: 0; border-top: 1px solid var(--rule-soft); margin: 2rem 0; }
   padding: 0; margin: -1px;
   overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; border: 0;
 }
+
+
+/* ---- embedded ---------------------------------------------------------- */
+
+/*
+ * The vault is opened two ways: as its own page, and inside a letting agent's
+ * site in a narrow column. Embedded, the reader has already been told what this
+ * is by the page around it, and what they need is the controls, immediately.
+ * So the explanatory hero, the file editor and the log are dropped rather than
+ * shrunk, and remain one click away in their own tab.
+ */
+
+.embedded {
+  background: var(--sheet);
+}
+
+.embedded .sheet {
+  margin: 0;
+  padding: 1.1rem 1.15rem 1.5rem;
+  box-shadow: none;
+  max-width: none;
+}
+
+.embedded .standfirst,
+.embedded .hero-reference,
+.embedded .file-editor,
+.embedded .ledger-section {
+  display: none;
+}
+
+.embedded .masthead {
+  padding-bottom: 0.85rem;
+  gap: 0.5rem;
+}
+
+.embedded .wordmark { font-size: var(--t-md); }
+
+.embedded .section { margin-top: 1.4rem; }
+
+.embedded .split {
+  grid-template-columns: 1fr;
+  gap: 1.4rem;
+}
+
+.embedded .section h2 { font-size: var(--t-md); }
+
+.embedded .figure { font-size: var(--t-xl); }
+
+.embedded .perm { padding: 0.7rem 0; }
+
+.embedded .perm-reveals { font-size: var(--t-xs); }
+
+/* A rule the page around it cannot draw: this panel is a different website. */
+.embedded-note {
+  display: none;
+  font-size: var(--t-xs);
+  color: var(--ink-faint);
+  border-top: 1px solid var(--rule-soft);
+  padding-top: 0.6rem;
+  margin-top: 1.4rem;
+}
+
+.embedded .embedded-note { display: block; }

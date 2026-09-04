@@ -27,7 +27,7 @@
   <div id="notice-slot" aria-live="polite"></div>
 
   <!-- The hero: a letting reference with everything blacked out but the answer. -->
-  <section class="section" style="margin-top:2.25rem">
+  <section class="section hero-reference" style="margin-top:2.25rem">
     <h2>What they asked, and what they got</h2>
     <p class="lede">On the left is what a letting agency would normally hold about you.
       On the right is everything they actually receive.</p>
@@ -87,7 +87,7 @@
     </aside>
   </div>
 
-  <section class="section">
+  <section class="section file-editor">
     <h2>Your file</h2>
     <p class="lede">Sample details, so there is something to answer about. Change anything
       and the answers change with it. None of it is transmitted; this page contains no
@@ -98,7 +98,7 @@
     </div>
   </section>
 
-  <section class="section">
+  <section class="section ledger-section">
     <h2>Every question anyone asked</h2>
     <p class="lede">Your own copy, kept here. Nobody else has it.</p>
     <ul class="ledger" id="ledger"></ul>
@@ -107,6 +107,9 @@
     </div>
   </section>
 
+  <p class="embedded-note">This panel is a different website with its own storage.
+    <a href="./" target="_blank" rel="noopener">Open your full file in its own tab</a>
+    to edit details or read the log.</p>
 </main>
 <script type="module" src="./ui/app.js"></script>
 </body>

@@ -508,6 +508,10 @@ function renderDemoSwitch() {
 /* -------------------------------------------------------------------------- */
 
 async function boot() {
+  // Embedded, the page around this one has already explained what it is, so the
+  // explanatory sections are dropped and the controls come first.
+  if (window.top !== window) document.body.classList.add('embedded');
+
   renderStatus();
   renderOriginPicker();
   renderFacts();
