@@ -15,6 +15,7 @@ import { assess, summarise, resultsFor, clearResults } from '../lib/assessment.j
 import { registerHostTools, hostToolNames } from '../lib/agentsurface.js';
 import { escapeHtml as esc, gbp, errText } from '../lib/util.js';
 import { drawGraph, shortOrigin } from './graph.js';
+import { compareDisclosure } from '../lib/counterfactual.js';
 import { runDemo, demoRunning } from './demo.js';
 import { vaultOrigin, hostOrigin } from '../config.js';
 
@@ -58,21 +59,40 @@ function renderGraph() {
       : 'You have allowed us ' + n + ' question' + (n === 1 ? '' : 's') + '. That is all we can ask.';
 }
 
+/**
+ * Draw the property list.
+ *
+ * The glyph is a plan, not a photograph. Every letting site is pictures of empty
+ * rooms, this one has no real property to photograph, and a stock image would be
+ * a lie about a flat that does not exist. So the glyph is drawn from the facts
+ * that are true: one cell per bedroom, filled up to the occupancy limit.
+ */
 function renderListings() {
   $('listings').innerHTML = LISTINGS.map((l) => {
     const active = l.id === activeListing;
+    const cells = Math.max(l.bedrooms, 4);
+    const cols = Math.ceil(Math.sqrt(cells));
+    const plan = Array.from({ length: cols * cols }, (_, i) =>
+      '<i' + (i < l.bedrooms ? ' class="filled"' : '') + '></i>').join('');
+
     return (
-      '<div class="perm' + (active ? ' is-live' : '') + '">' +
+      '<article class="listing' + (active ? ' is-active' : '') + '">' +
+      '<div class="plan" aria-hidden="true" style="grid-template-columns:repeat(' + cols + ',1fr)">' +
+      plan + '</div>' +
       '<div>' +
-      '<p class="perm-title">' + esc(l.title) + '</p>' +
-      '<p class="perm-reveals">' + esc(l.area) + ' &middot; ' + gbp(l.monthlyRentGbp) +
-      ' a month &middot; ' + l.bedrooms + ' bed &middot; deposit ' + gbp(depositFor(l.monthlyRentGbp)) + '</p>' +
-      '<p class="perm-reveals">' + (l.allowsPets ? 'Pets welcome' : 'No pets') +
-      ' &middot; up to ' + l.maxOccupants + ' people &middot; free from ' + esc(l.availableFromIso) + '</p>' +
+      '<h3 class="listing-title">' + esc(l.title) + '</h3>' +
+      '<p class="listing-meta">' + esc(l.area) + ' &middot; ' + l.bedrooms + ' bed &middot; ' +
+      (l.allowsPets ? 'pets welcome' : 'no pets') + ' &middot; up to ' + l.maxOccupants + ' people</p>' +
+      '<p class="listing-meta">Deposit ' + gbp(depositFor(l.monthlyRentGbp)) +
+      ' &middot; free from ' + esc(l.availableFromIso) + '</p>' +
       '</div>' +
+      '<div style="text-align:right">' +
+      '<p class="listing-price">' + gbp(l.monthlyRentGbp) + '</p>' +
+      '<p class="listing-meta" style="margin:0 0 .5rem">a month</p>' +
       '<button class="' + (active ? 'primary' : 'quiet') + '" data-listing="' + esc(l.id) + '">' +
       (active ? 'Check this one' : 'Choose') + '</button>' +
-      '</div>'
+      '</div>' +
+      '</article>'
     );
   }).join('');
 }
@@ -136,7 +156,7 @@ function renderAssessment() {
 function renderTools() {
   const own = hostToolNames();
   const proxied = federationState().proxied;
-  $('tool-count').textContent = own.length + proxied.length + ' in total';
+  $('tool-count').textContent = own.length + proxied.length + ' in total right now.';
 
   const row = (name, kind, cls) =>
     '<li style="display:flex;justify-content:space-between;gap:.75rem;padding:.35rem 0;' +
@@ -150,11 +170,28 @@ function renderTools() {
       ? proxied.map((n) => row(n, 'borrowed', ' live')).join('')
       : '<li class="note" style="padding:.35rem 0">Nothing borrowed from you.</li>');
 
-  $('held-figure').textContent = 'Nothing';
+  renderStageFigures();
+}
+
+/**
+ * The three numbers on the stage.
+ *
+ * Deliberately the same three facts the whole argument rests on: how much was
+ * allowed, how much is held, and how much was never asked for. The third is the
+ * one nobody else can show, because it only exists if the questions replaced
+ * documents.
+ */
+function renderStageFigures() {
+  const borrowed = federatedHandles().map((t) => String(t.name));
+  $('fig-questions').textContent = String(borrowed.length);
+  $('fig-held').textContent = 'Nothing';
+  const c = compareDisclosure(borrowed);
+  $('fig-avoided').textContent = String(c.extraFacts);
 }
 
 function renderAll() {
   renderGraph();
+  renderStageFigures();
   renderListings();
   renderAssessment();
   renderTools();

@@ -26,8 +26,29 @@
 
   <div id="notice-slot" aria-live="polite"></div>
 
-  <!-- The hero: a letting reference with everything blacked out but the answer. -->
-  <section class="section hero-reference" style="margin-top:2.25rem">
+  <section class="stage on-dark hero-reference">
+    <p class="stage-claim">They asked nine questions. They received <em>nine words</em>.</p>
+    <p class="stage-sub">Everything they would normally have held about you is still here,
+      on your side of the line, and there is no code on this page that could send it anywhere.</p>
+
+    <div class="stage-figures">
+      <div>
+        <p class="stage-figure good" id="stage-bits">0</p>
+        <p class="stage-figure-label">bits about you handed over</p>
+      </div>
+      <div>
+        <p class="stage-figure bad" id="stage-avoided">0</p>
+        <p class="stage-figure-label">things they never got to ask</p>
+      </div>
+      <div>
+        <p class="stage-figure" id="stage-ratio">&mdash;</p>
+        <p class="stage-figure-label">less given away than the usual way</p>
+      </div>
+    </div>
+  </section>
+
+  <!-- A letting reference with everything blacked out but the answer. -->
+  <section class="section hero-reference">
     <h2>What they asked, and what they got</h2>
     <p class="lede">On the left is what a letting agency would normally hold about you.
       On the right is everything they actually receive.</p>

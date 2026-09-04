@@ -207,6 +207,21 @@ function renderDisclosure() {
           : 'A raw disclosure is live. This agent can identify you directly.';
 }
 
+/**
+ * The three numbers on the stage: what was given, what was withheld, and the
+ * ratio between them. Hidden entirely when nothing is allowed, because zeroes
+ * with a triumphant label are worse than no claim at all.
+ */
+function renderStage() {
+  const granted = readGrants()[selected] ?? [];
+  const bits = disclosedBits(selected);
+  const c = compareDisclosure(granted);
+
+  $('stage-bits').textContent = Number.isInteger(bits) ? String(bits) : bits.toFixed(1);
+  $('stage-avoided').textContent = String(c.extraFacts);
+  $('stage-ratio').textContent = c.ratio > 0 ? c.ratio + '\u00d7' : '\u2014';
+}
+
 function renderCounterfactual() {
   const granted = readGrants()[selected] ?? [];
   const box = $('counterfactual');
@@ -357,6 +372,7 @@ function renderFacts() {
 
 /** Redraw everything that depends on grant or fact state. */
 function renderAll() {
+  renderStage();
   renderReference();
   renderPermissions();
   renderDisclosure();

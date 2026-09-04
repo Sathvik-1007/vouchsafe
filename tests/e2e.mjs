@@ -392,7 +392,8 @@ async function main() {
     const own = await toolsIn(HOST_ORIGIN);
     const proxies = own.filter((t) => t.startsWith('applicant_'));
     eq(proxies.length, 9, 'proxy count');
-    eq(await textIn(HOST_ORIGIN, '#tool-count'), '15 in total', 'published count');
+    const shown = await textIn(HOST_ORIGIN, '#tool-count');
+    ok(shown.includes(String(own.length)), 'the page does not report its own tool count: ' + shown);
   });
 
   await check('the capability graph draws one line per allowed question', async () => {

@@ -80,6 +80,10 @@ html { -webkit-text-size-adjust: 100%; }
 
 body {
   margin: 0;
+  /* The stage bleeds past the sheet's padding by a negative margin. Without
+     this the bleed adds to the document width on a narrow screen and the whole
+     page scrolls sideways. */
+  overflow-x: hidden;
   background: var(--desk);
   color: var(--ink);
   font-family: var(--sans);
@@ -94,6 +98,7 @@ body {
 
 .sheet {
   max-width: 78rem;
+  overflow-x: clip;
   margin: clamp(1rem, 3vw, 2.5rem) auto;
   background: var(--sheet);
   padding: var(--sheet-pad);
@@ -550,3 +555,188 @@ hr.rule { border: 0; border-top: 1px solid var(--rule-soft); margin: 2rem 0; }
 }
 
 .embedded .embedded-note { display: block; }
+
+/* ==========================================================================
+   Stage: the dark band.
+
+   The paper surface is honest for a document but it is one value all the way
+   down, and a page with no tonal range has no hierarchy no matter how good the
+   type is. So the argument gets a stage: near-black, full bleed, with the claim
+   at a size the rest of the page never reaches. Everything below it is quiet by
+   comparison, which is what makes it read as the important part.
+   ========================================================================== */
+
+.stage {
+  background: var(--ink);
+  color: var(--sheet);
+  /* Bleed sideways only. An earlier version pulled the top edge up too and
+     buried the wordmark under the band. */
+  margin: 1.5rem calc(var(--sheet-pad) * -1) 0;
+  padding: clamp(2.5rem, 6vw, 4.5rem) var(--sheet-pad) clamp(2rem, 4vw, 3rem);
+  position: relative;
+  overflow: hidden;
+}
+
+/* Faint ruled lines, like the form this replaces. Decoration that is on-brief. */
+.stage::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background-image: repeating-linear-gradient(
+    to bottom, transparent 0 2.35rem, rgba(246, 247, 243, 0.055) 2.35rem 2.4rem
+  );
+  pointer-events: none;
+}
+
+.stage > * { position: relative; }
+
+.stage-claim {
+  font-family: var(--serif);
+  font-variation-settings: 'opsz' 144, 'WONK' 1, 'SOFT' 0;
+  font-weight: 800;
+  font-size: clamp(2.4rem, 6.2vw, 5rem);
+  line-height: 0.98;
+  letter-spacing: -0.035em;
+  margin: 0;
+  max-width: 20ch;
+  text-wrap: balance;
+}
+
+.stage-claim em {
+  font-style: normal;
+  display: inline-block;
+  background: var(--sheet);
+  color: var(--ink);
+  padding: 0 0.14em;
+  transform: rotate(-0.5deg);
+}
+
+.stage-sub {
+  font-size: var(--t-md);
+  line-height: 1.4;
+  color: #b9beb4;
+  max-width: 46ch;
+  margin: 1.4rem 0 0;
+}
+
+.stage-figures {
+  display: flex;
+  gap: clamp(1.75rem, 5vw, 4rem);
+  flex-wrap: wrap;
+  margin-top: 2.25rem;
+  padding-top: 1.5rem;
+  border-top: 1px solid rgba(246, 247, 243, 0.18);
+}
+
+.stage-figure {
+  font-family: var(--serif);
+  font-variation-settings: 'opsz' 144, 'WONK' 1;
+  font-weight: 800;
+  font-size: clamp(1.9rem, 3.6vw, 2.9rem);
+  line-height: 1;
+  letter-spacing: -0.02em;
+  font-variant-numeric: tabular-nums;
+  margin: 0;
+}
+
+.stage-figure.good { color: #c4a7f0; }
+.stage-figure.bad { color: #e79aa8; }
+
+.stage-figure + .stage-figure-label,
+.stage-figure-label {
+  font-size: var(--t-sm);
+  color: #9aa094;
+  margin: 0.3rem 0 0;
+  max-width: 18ch;
+}
+
+/* The graph sits on the stage, so its lines glow instead of fading. */
+.stage .graph-frame {
+  margin: 1.5rem calc(var(--sheet-pad) * -0.4) 0;
+}
+
+.on-dark { --rule-soft: rgba(246, 247, 243, 0.16); }
+
+.stage button {
+  border-color: var(--sheet);
+  color: var(--sheet);
+}
+
+.stage button:hover { background: var(--sheet); color: var(--ink); }
+
+.stage .tag { background: rgba(246, 247, 243, 0.12); color: #cdd2c7; }
+.stage .tag.live { background: rgba(196, 167, 240, 0.18); color: #d6bffa; }
+.stage .tag.off { background: rgba(231, 154, 168, 0.16); color: #f0b6c1; }
+
+.stage code { color: #8d9386; }
+
+/* ---- property cards ---------------------------------------------------- */
+
+.listing {
+  display: grid;
+  grid-template-columns: 5.5rem minmax(0, 1fr) auto;
+  gap: 0 1.25rem;
+  align-items: center;
+  padding: 1.1rem 0;
+  border-bottom: 1px solid var(--rule-soft);
+}
+
+.listing:last-child { border-bottom: 0; }
+
+/*
+ * A plan glyph rather than a photograph. Every letting site is photographs of
+ * empty rooms; this one has none to show, and a fabricated stock image would be
+ * a lie about a property that does not exist. The glyph encodes the actual
+ * facts: one cell per bedroom, filled to the household limit.
+ */
+.plan {
+  display: grid;
+  gap: 2px;
+  aspect-ratio: 1;
+  padding: 4px;
+  border: 1.5px solid var(--ink);
+  background: var(--sheet);
+}
+
+.plan i {
+  background: var(--rule-soft);
+  border-radius: 1px;
+}
+
+.plan i.filled { background: var(--stamp); }
+
+.listing-title {
+  font-family: var(--serif);
+  font-variation-settings: 'opsz' 32;
+  font-size: var(--t-md);
+  font-weight: 600;
+  line-height: 1.2;
+  margin: 0;
+}
+
+.listing-meta { color: var(--ink-mid); font-size: var(--t-sm); margin: 0.25rem 0 0; }
+
+.listing-price {
+  font-family: var(--serif);
+  font-variation-settings: 'opsz' 60;
+  font-weight: 700;
+  font-size: var(--t-md);
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+}
+
+.listing.is-active { background: var(--stamp-wash); box-shadow: -1rem 0 0 var(--stamp-wash), 1rem 0 0 var(--stamp-wash); }
+
+@media (max-width: 34rem) {
+  .listing { grid-template-columns: 3.5rem minmax(0, 1fr); }
+  .listing > :last-child { grid-column: 1 / -1; margin-top: 0.6rem; }
+}
+
+/* ---- sticky sidebar ---------------------------------------------------- */
+
+@media (min-width: 62rem) {
+  .sticky-panel {
+    position: sticky;
+    top: 1.25rem;
+  }
+}

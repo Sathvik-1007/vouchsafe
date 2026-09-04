@@ -15,8 +15,6 @@
   <header class="masthead">
     <div>
       <h1 class="wordmark">Marlow &amp; Reed <span>lettings</span></h1>
-      <p class="standfirst">We will never ask you for a payslip, a bank statement or
-        your passport. We ask your file a question. It answers yes or no.</p>
     </div>
     <div class="meta">
       <span class="tag" id="mcp-status">checking</span>
@@ -26,23 +24,37 @@
 
   <div id="notice-slot" aria-live="polite"></div>
 
-  <section class="section" style="margin-top:2rem">
-    <div style="display:flex;gap:1rem;align-items:baseline;justify-content:space-between;flex-wrap:wrap">
+  <section class="stage on-dark">
+    <p class="stage-claim">We will never ask you for a payslip. We ask, and your
+      file says <em>yes</em> or <em>no</em>.</p>
+    <p class="stage-sub">Everything a letting agency normally demands stays on your
+      computer. We receive one word per question, and only the questions you allow.</p>
+
+    <div class="stage-figures">
       <div>
-        <h2 style="margin-bottom:.2rem">What we can ask you</h2>
-        <p class="lede" style="margin-bottom:0" id="graph-caption">Nothing yet.</p>
+        <p class="stage-figure good" id="fig-questions">0</p>
+        <p class="stage-figure-label">questions you have allowed</p>
       </div>
-      <div class="controls">
+      <div>
+        <p class="stage-figure" id="fig-held">Nothing</p>
+        <p class="stage-figure-label">documents we hold about you</p>
+      </div>
+      <div>
+        <p class="stage-figure bad" id="fig-avoided">0</p>
+        <p class="stage-figure-label">things about you we never asked for</p>
+      </div>
+      <div style="margin-left:auto;align-self:center">
         <button id="play-demo" class="primary">Watch how it works</button>
       </div>
     </div>
 
-    <svg id="graph" viewBox="0 0 1200 300" preserveAspectRatio="xMidYMid meet"
-         style="display:block;width:100%;height:auto;margin-top:1.25rem" role="img"
-         aria-label="Which questions this agency may currently ask the applicant's file"></svg>
+    <p class="stage-figure-label" id="graph-caption" style="max-width:64ch;margin:2rem 0 0"></p>
 
-    <p class="note" style="max-width:70ch">Each line is one question you allowed. It is live,
-      not a record of something already sent. Withdraw it and the line goes.</p>
+    <div class="graph-frame">
+      <svg id="graph" viewBox="0 0 1200 250" preserveAspectRatio="xMidYMid meet"
+           style="display:block;width:100%;height:auto" role="img"
+           aria-label="Which questions this agency may currently ask the applicant's file"></svg>
+    </div>
   </section>
 
   <section id="demo-stage" hidden class="section">
@@ -72,7 +84,7 @@
       </section>
     </div>
 
-    <aside>
+    <aside class="sticky-panel">
       <section>
         <h2 style="font-family:var(--serif);font-size:var(--t-md);font-weight:600;margin:0 0 .35rem">
           Your file
@@ -80,29 +92,22 @@
         <p class="note" style="margin:0 0 .9rem">A different website, with its own storage.
           We cannot read inside this panel. We can only ask it things you have allowed.</p>
         <iframe id="vault-frame" allow="tools" title="Your file, on its own website"
-                style="width:100%;height:40rem;border:1px solid var(--rule);background:var(--sheet)"></iframe>
+                style="width:100%;height:min(30rem,60vh);border:1px solid var(--rule);background:var(--sheet)"></iframe>
         <div class="controls" style="margin-top:.75rem">
           <button id="open-vault" class="quiet">Open your file in its own tab</button>
         </div>
       </section>
 
-      <section style="margin-top:2rem">
-        <h2 style="font-family:var(--serif);font-size:var(--t-md);font-weight:600;margin:0 0 .35rem">
-          What we hold about you
-        </h2>
-        <p class="figure" id="held-figure">Nothing</p>
-        <p class="figure-label">We write no applicant data to storage of any kind.
-          Reload this page and the assessment is gone.</p>
-      </section>
-
-      <section style="margin-top:2rem">
-        <h2 style="font-family:var(--serif);font-size:var(--t-md);font-weight:600;margin:0 0 .35rem">
-          Our tools <span class="note" id="tool-count"></span>
-        </h2>
-        <ul class="plain" id="tool-list"></ul>
-      </section>
     </aside>
   </div>
+
+  <section class="section">
+    <h2>Every tool on this page</h2>
+    <p class="lede">Six are ours and describe the property. The rest are yours, borrowed
+      one question at a time, and they exist only while you allow them.
+      <span id="tool-count"></span></p>
+    <ul class="plain" id="tool-list" style="columns:2;column-gap:2.5rem"></ul>
+  </section>
 
 </main>
 <script type="module" src="./ui/app.js"></script>
