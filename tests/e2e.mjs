@@ -499,6 +499,61 @@ async function main() {
     ok((await textIn(HOST_ORIGIN, '#graph-caption')).includes('Nothing yet'), 'caption did not reset');
   });
 
+  // ---- the proof page ------------------------------------------------------
+  console.log('\nthe proof page');
+
+  await check('the proof page reads the registry rather than reporting on it', async () => {
+    // The phase before this one ends by withdrawing everything, so there is
+    // something to read.
+    await browser.goto(`${HOST_ORIGIN}/proof.html?vault=${encodeURIComponent(VAULT_ORIGIN)}`, 5000);
+    eq(await clickVault('#grant-typical'), 'ok', 'grant the standard nine');
+    await sleep(2000);
+    // It registers nothing of its own, which is what makes it a witness rather
+    // than a participant.
+    eq(await textIn(HOST_ORIGIN, '#fig-own'), '0', 'the proof page registered tools of its own');
+    eq(await textIn(HOST_ORIGIN, '#fig-borrowed'), '9', 'borrowed count');
+    eq(
+      await browser.evalIn(HOST_ORIGIN, `document.querySelectorAll('#borrowed-list li').length`),
+      9,
+      'borrowed list length'
+    );
+  });
+
+  await check('an allowed permission can be called from the proof page', async () => {
+    await browser.evalIn(HOST_ORIGIN, `document.getElementById('probe-missing').click()`);
+    await sleep(1800);
+    const out = await textIn(HOST_ORIGIN, '#probe-out');
+    ok(/currently allowed/.test(out), 'expected a live call, got: ' + out.slice(0, 160));
+    ok(/yes \(tested against/.test(out), 'the call did not return the vault answer: ' + out.slice(0, 160));
+  });
+
+  await check('a withdrawn permission leaves no tool to call at all', async () => {
+    // The claim under test: authority is tool existence, not a runtime check.
+    eq(await clickVault('#permission-list button[data-name="income_meets_multiple"]'), 'ok', 'withdraw');
+    await sleep(1800);
+    eq(await textIn(HOST_ORIGIN, '#fig-borrowed'), '8', 'the registry did not shrink');
+
+    await browser.evalIn(HOST_ORIGIN, `document.getElementById('probe-missing').click()`);
+    await sleep(1800);
+    const out = await textIn(HOST_ORIGIN, '#probe-out');
+    ok(/is not among them/.test(out), 'expected the handle to be absent, got: ' + out.slice(0, 200));
+    ok(/does not exist/.test(out), 'the page did not state the consequence');
+  });
+
+  await check('the proof page logs a change only when the browser reports one', async () => {
+    const seen = Number(await textIn(HOST_ORIGIN, '#fig-events'));
+    ok(seen > 0, 'no toolchange events were recorded');
+    ok(
+      (await textIn(HOST_ORIGIN, '#event-log')).includes('borrowed'),
+      'the log does not describe what moved'
+    );
+  });
+
+  // Put it back and return to the application for the phases that follow.
+  eq(await clickVault('#permission-list button[data-name="income_meets_multiple"]'), 'ok', 'restore');
+  await sleep(1200);
+  await browser.goto(`${HOST_ORIGIN}/?vault=${encodeURIComponent(VAULT_ORIGIN)}`, 5000);
+
   // ---- the walkthrough -----------------------------------------------------
   console.log('\nthe walkthrough');
 
