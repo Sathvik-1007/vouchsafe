@@ -14,10 +14,13 @@
  */
 
 /** Horizontal centre of the vault node. */
-const VAULT_X = 190;
+const VAULT_X = 175;
 
 /** Horizontal centre of the host node. */
-const HOST_X = 910;
+const HOST_X = 960;
+
+/** Half-width of a node box. */
+const NODE_W = 145;
 
 /** Vertical centre of both nodes. */
 const MID_Y = 150;
@@ -25,11 +28,25 @@ const MID_Y = 150;
 /** Half-height of a node box. */
 const NODE_H = 34;
 
+/**
+ * Where a capability line ends and its label begins.
+ *
+ * The labels sit between the two nodes rather than beside the receiving one.
+ * An earlier layout ran them into the host node's caption, because nine lanes
+ * at 19px span 152px vertically and the caption sat inside that band. Putting
+ * the column in the gap removes the collision by construction instead of
+ * tuning offsets until it happens to look right.
+ */
+const LANE_END_X = 600;
+
 /** Vertical space between adjacent capability lines. */
 const LANE_GAP = 19;
 
 /** Most lines drawn before they are collapsed into a count. */
 const MAX_LANES = 11;
+
+/** Total drawing height. Captions sit below the deepest possible lane. */
+const VIEW_H = 300;
 
 /** Escape text for SVG interpolation. */
 function esc(value) {
@@ -50,7 +67,7 @@ function esc(value) {
  * @returns {string} SVG markup
  */
 function node(x, title, subtitle, accent) {
-  const w = 300;
+  const w = NODE_W * 2;
   return (
     '<g>' +
     '<rect x="' + (x - w / 2) + '" y="' + (MID_Y - NODE_H) + '" width="' + w + '" height="' + NODE_H * 2 + '" ' +
@@ -80,15 +97,15 @@ export function drawGraph(svg, state) {
 
   // The boundary. Drawn first so everything else sits on top of it.
   parts.push(
-    '<line x1="550" y1="18" x2="550" y2="282" stroke="#333d4a" stroke-width="1" ' +
+    '<line x1="470" y1="12" x2="470" y2="252" stroke="#333d4a" stroke-width="1" ' +
       'stroke-dasharray="3 5"/>' +
-      '<text x="550" y="292" text-anchor="middle" fill="#63707f" ' +
+      '<text x="470" y="266" text-anchor="middle" fill="#63707f" ' +
       'font-family="ui-monospace, monospace" font-size="9.5" letter-spacing="1.5">ORIGIN BOUNDARY</text>'
   );
 
   if (shown.length === 0) {
     parts.push(
-      '<text x="550" y="' + (MID_Y + 4) + '" text-anchor="middle" fill="#63707f" ' +
+      '<text x="470" y="' + (MID_Y + 4) + '" text-anchor="middle" fill="#63707f" ' +
         'font-family="ui-monospace, monospace" font-size="11.5">' +
         (state.vaultReachable
           ? 'no permissions granted — this site knows nothing'
@@ -103,20 +120,24 @@ export function drawGraph(svg, state) {
     const y = top + i * LANE_GAP;
     const label = String(tool.name ?? '');
     parts.push(
-      '<path d="M ' + (VAULT_X + 150) + ' ' + MID_Y +
-        ' C 520 ' + MID_Y + ', 580 ' + y + ', ' + (HOST_X - 150) + ' ' + y + '" ' +
+      // vault edge -> label dot, then label dot -> host edge, so every line is
+      // visibly continuous through its own name.
+      '<path d="M ' + (VAULT_X + NODE_W) + ' ' + MID_Y +
+        ' C 400 ' + MID_Y + ', 470 ' + y + ', ' + LANE_END_X + ' ' + y + '" ' +
         'fill="none" stroke="#4ade80" stroke-width="1.2" opacity="0.75">' +
         '<animate attributeName="opacity" values="0;0.75" dur="260ms" fill="freeze"/>' +
         '</path>' +
-        '<circle cx="' + (HOST_X - 150) + '" cy="' + y + '" r="2.4" fill="#4ade80"/>' +
-        '<text x="' + (HOST_X - 143) + '" y="' + (y + 3.4) + '" fill="#9aa7b6" ' +
+        '<path d="M ' + (LANE_END_X + 132) + ' ' + y + ' L ' + (HOST_X - NODE_W) + ' ' + y + '" ' +
+        'fill="none" stroke="#4ade80" stroke-width="1.2" opacity="0.45"/>' +
+        '<circle cx="' + LANE_END_X + '" cy="' + y + '" r="2.4" fill="#4ade80"/>' +
+        '<text x="' + (LANE_END_X + 8) + '" y="' + (y + 3.4) + '" fill="#9aa7b6" ' +
         'font-family="ui-monospace, monospace" font-size="9.5">' + esc(label) + '</text>'
     );
   });
 
   if (overflow > 0) {
     parts.push(
-      '<text x="' + (HOST_X - 143) + '" y="' + (top + shown.length * LANE_GAP + 3) + '" ' +
+      '<text x="' + (LANE_END_X + 8) + '" y="' + (top + shown.length * LANE_GAP + 3) + '" ' +
         'fill="#63707f" font-family="ui-monospace, monospace" font-size="9.5">+' + overflow + ' more</text>'
     );
   }
@@ -124,13 +145,16 @@ export function drawGraph(svg, state) {
   parts.push(node(VAULT_X, 'applicant vault', shortOrigin(state.vaultOrigin), '#4ade80'));
   parts.push(node(HOST_X, 'this letting agent', shortOrigin(state.hostOrigin), '#7dd3fc'));
 
+  // Captions sit below every possible lane, so they can never be overrun no
+  // matter how many capabilities are borrowed.
+  const captionY = VIEW_H - 8;
   parts.push(
-    '<text x="' + VAULT_X + '" y="' + (MID_Y + NODE_H + 22) + '" text-anchor="middle" ' +
+    '<text x="' + VAULT_X + '" y="' + captionY + '" text-anchor="middle" ' +
       'fill="#63707f" font-family="ui-monospace, monospace" font-size="9.5">' +
-      'holds the facts · answers questions</text>' +
-      '<text x="' + HOST_X + '" y="' + (MID_Y + NODE_H + 22) + '" text-anchor="middle" ' +
+      'holds the facts, answers questions</text>' +
+      '<text x="' + HOST_X + '" y="' + captionY + '" text-anchor="middle" ' +
       'fill="#63707f" font-family="ui-monospace, monospace" font-size="9.5">' +
-      'holds nothing · asks questions</text>'
+      'holds nothing, asks questions</text>'
   );
 
   svg.innerHTML = parts.join('');
