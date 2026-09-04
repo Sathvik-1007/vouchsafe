@@ -79,8 +79,10 @@ function renderListings() {
   // that matter.
   const count = LISTINGS.length;
   const words = ['no', 'one', 'two', 'three', 'four', 'five', 'six', 'seven', 'eight'];
+  const spelled = words[count] ?? String(count);
   $('listings-lede').textContent =
-    (words[count] ?? String(count)) + ' propert' + (count === 1 ? 'y' : 'ies') +
+    spelled.charAt(0).toUpperCase() + spelled.slice(1) +
+    ' propert' + (count === 1 ? 'y' : 'ies') +
     ' in south Manchester. Each one asks for something slightly different.';
 
   $('listings').innerHTML = LISTINGS.map((l) => {
