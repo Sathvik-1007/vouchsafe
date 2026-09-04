@@ -55,6 +55,21 @@ function look(selector) {
 /** True while a run is in progress, so the button cannot start two. */
 let running = false;
 
+/** Set when someone presses the close control, read between every beat. */
+let stopped = false;
+
+/**
+ * Stop the walkthrough at the next beat.
+ *
+ * Not mid-step: a step that has asked the other origin for something is left to
+ * finish, so the two sides cannot be left disagreeing about what was granted.
+ *
+ * @returns {void}
+ */
+export function stopDemo() {
+  stopped = true;
+}
+
 /**
  * Call one of this origin's own tools, the way an agent would.
  *
@@ -167,13 +182,13 @@ function steps() {
   return [
     {
       say: 'Renting normally means uploading your payslips, your bank statements and your passport.',
-      look: '#demo-stage',
+      look: '#graph',
       detail: 'To six agencies. Six copies of your life, kept indefinitely.',
       wait: QUICK_MS,
     },
     {
       say: 'None of them wanted your salary. They wanted one answer.',
-      look: '#demo-stage',
+      look: '#graph',
       detail: 'Does your income cover three times the rent. Yes or no.',
       wait: QUICK_MS,
     },
@@ -208,7 +223,7 @@ function steps() {
     },
     {
       say: 'Now suppose the agency gets greedy and starts guessing your salary.',
-      look: '#demo-stage',
+      look: '#graph',
       detail: 'Every single answer is legitimate. The run of them is not.',
       act: async () => {
         const handle = federatedHandles().find((t) => String(t.name) === 'income_meets_multiple');
@@ -266,8 +281,10 @@ export async function runDemo(onUpdate) {
   running = true;
 
   const script = steps();
+  stopped = false;
   try {
     for (let i = 0; i < script.length; i += 1) {
+      if (stopped) return;
       const step = script[i];
       if (step.look) look(step.look);
       onUpdate({
@@ -314,6 +331,7 @@ export async function runDemo(onUpdate) {
       }
 
       await new Promise((r) => setTimeout(r, step.wait ?? BEAT_MS));
+      if (stopped) return;
     }
   } finally {
     running = false;

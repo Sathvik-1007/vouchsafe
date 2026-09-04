@@ -142,8 +142,13 @@ class Browser {
       '--no-first-run',
       '--no-default-browser-check',
       '--disable-extensions',
+      // Headless, so a run never puts a window on anyone's screen. Checked
+      // empirically before switching: document.modelContext, registerTool and
+      // getTools are all present under --headless=new, so nothing under test is
+      // lost. The blank window a headful run left sitting there for its whole
+      // duration was the most irritating thing about this suite.
+      '--headless=new',
       '--window-size=1600,1000',
-      'about:blank',
     ], { stdio: 'ignore', detached: true });
 
     // Poll rather than sleep a fixed amount: a cold profile takes longer.

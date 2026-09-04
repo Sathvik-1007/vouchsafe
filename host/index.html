@@ -63,17 +63,21 @@
     </div>
   </section>
 
-  <section id="demo-stage" hidden class="section">
-    <div class="sunk">
-      <p class="note" id="demo-progress" style="margin:0 0 .4rem"></p>
-      <p id="demo-caption" style="font-family:var(--serif);font-variation-settings:'opsz' 40;
-         font-size:var(--t-md);line-height:1.3;margin:0"></p>
-      <p id="demo-detail" class="note" style="margin:.35rem 0 0"></p>
-      <pre id="demo-output" hidden style="font-family:var(--mono);font-size:var(--t-xs);
-           color:var(--ink-mid);background:#fff;border:1px solid var(--rule-soft);
-           padding:.8rem;margin:.9rem 0 0;white-space:pre-wrap;max-height:12rem;overflow:auto"></pre>
+  <!--
+    The walkthrough speaks from a banner at the top of the viewport rather than
+    a block in the page. It appears while it is talking and leaves when it is
+    done, so it never pushes the layout around and never leaves its last
+    sentence sitting in the document afterwards.
+  -->
+  <aside id="demo-stage" class="announcer" hidden aria-live="polite">
+    <div class="announcer-body">
+      <p class="announcer-step" id="demo-progress"></p>
+      <p class="announcer-line" id="demo-caption"></p>
+      <p class="announcer-detail" id="demo-detail"></p>
+      <pre id="demo-output" hidden class="announcer-output"></pre>
     </div>
-  </section>
+    <button type="button" id="demo-stop" class="announcer-close" aria-label="Stop the walkthrough">&times;</button>
+  </aside>
 
   <div class="split section">
     <div>
@@ -87,6 +91,10 @@
         <h2>Your application</h2>
         <p class="lede" id="assess-lede">Pick a property and we will check whether it works.</p>
         <div id="assessment"></div>
+        <div class="controls" id="apply-controls" hidden style="margin-top:1.25rem">
+          <button id="apply" class="primary">Apply for this property</button>
+          <span class="note" id="apply-note"></span>
+        </div>
       </section>
     </div>
 

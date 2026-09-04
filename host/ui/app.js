@@ -17,7 +17,7 @@ import { registerHostTools, hostToolNames } from '../lib/agentsurface.js';
 import { escapeHtml as esc, gbp, errText } from '../lib/util.js';
 import { drawGraph } from './graph.js';
 import { compareDisclosure } from '../lib/counterfactual.js';
-import { runDemo, demoRunning } from './demo.js';
+import { runDemo, demoRunning, stopDemo } from './demo.js';
 import { vaultOrigin, hostOrigin } from '../config.js';
 import { notify } from './toast.js';
 
@@ -124,6 +124,7 @@ function renderAssessment() {
   if (assessing) {
     lede.textContent = 'Asking your file, one question at a time.';
     box.innerHTML = '';
+    $('apply-controls').hidden = true;
     return;
   }
 
@@ -131,6 +132,7 @@ function renderAssessment() {
     lede.textContent = 'Nothing checked yet for ' + listing.title + '.';
     box.innerHTML =
       '<p class="note">Press <em>Check this one</em>, or ask your assistant to run the checks.</p>';
+    $('apply-controls').hidden = true;
     return;
   }
 
@@ -169,6 +171,16 @@ function renderAssessment() {
         : '<div class="notice"><strong>Not finished.</strong> ' + esc(summary.reason) + '</div>';
 
   box.innerHTML = verdict + '<div class="reference">' + rows + '</div>';
+
+  // The control appears once there is something to apply for. Marking every
+  // unmet requirement on load would tell someone they had failed before they
+  // had done anything, and by the time it mattered they would have stopped
+  // seeing it.
+  $('apply-controls').hidden = false;
+  $('apply-note').textContent =
+    summary.decision === 'eligible'
+      ? 'Everything this landlord asks for has been answered.'
+      : '';
 }
 
 function renderTools() {
@@ -199,6 +211,21 @@ function renderTools() {
  * one nobody else can show, because it only exists if the questions replaced
  * documents.
  */
+/**
+ * Call one of this origin's own tools, the way an assistant would.
+ *
+ * @param {string} name
+ * @param {Record<string, unknown>} args
+ * @returns {Promise<string>}
+ */
+async function callTool(name, args) {
+  const tools = await document.modelContext.getTools();
+  const tool = tools.find((t) => t.name === name);
+  if (!tool) return 'Error: ' + name + ' is not available';
+  // executeTool takes its arguments as a JSON string, not an object.
+  return String(await document.modelContext.executeTool(tool, JSON.stringify(args)) ?? '');
+}
+
 function renderStageFigures() {
   const borrowed = federatedHandles().map((t) => String(t.name));
   $('fig-questions').textContent = String(borrowed.length);
@@ -244,6 +271,7 @@ function renderDemo(state) {
 
   if (state === null) {
     stage.hidden = true;
+    stage.classList.remove('is-halted');
     button.disabled = false;
     button.textContent = 'Watch how it works';
     return;
@@ -261,8 +289,7 @@ function renderDemo(state) {
   // A stopped walkthrough must not look like a finished one. It carries the
   // weight of an error, because something the viewer was promised did not
   // happen and they need to know why.
-  const panel = stage.firstElementChild;
-  if (panel) panel.className = state.halted ? 'notice' : 'sunk';
+  stage.classList.toggle('is-halted', Boolean(state.halted));
 
   const out = $('demo-output');
   out.hidden = state.output.length === 0;
@@ -289,6 +316,43 @@ function wireEvents() {
   });
 
   $('open-vault').addEventListener('click', () => window.open(vaultOrigin(), '_blank', 'noopener'));
+
+  $('apply').addEventListener('click', async () => {
+    const checks = resultsFor(activeListing);
+    const summary = summarise(checks);
+
+    if (summary.decision === 'eligible') {
+      const out = await callTool('submit_application', { listing_id: activeListing });
+      notify(out.startsWith('Error') ? 'That could not be submitted.' : 'Application sent.', {
+        tone: out.startsWith('Error') ? 'bad' : 'good',
+        detail: out,
+      });
+      return;
+    }
+
+    // Mark exactly the rows in the way, now that they have tried.
+    const rows = [...document.querySelectorAll('#assessment .reference-row')];
+    let marked = 0;
+    checks.forEach((check, index) => {
+      const blocking = check.mandatory && check.status !== 'pass';
+      rows[index]?.classList.toggle('is-required', blocking);
+      if (blocking) marked += 1;
+    });
+
+    $('apply-note').textContent = marked + ' marked with an asterisk still to settle.';
+    notify(
+      marked === 1 ? 'One requirement is still in the way.' : marked + ' requirements are still in the way.',
+      { tone: 'bad', detail: summary.reason }
+    );
+    rows.find((r) => r.classList.contains('is-required'))
+      ?.scrollIntoView({ behavior: matchMedia('(prefers-reduced-motion: reduce)').matches ? 'auto' : 'smooth', block: 'center' });
+  });
+
+  $('demo-stop').addEventListener('click', () => {
+    stopDemo();
+    renderDemo(null);
+    notify('Walkthrough stopped.', { tone: 'plain' });
+  });
 
   $('play-demo').addEventListener('click', () => {
     if (demoRunning()) return;

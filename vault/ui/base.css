@@ -863,7 +863,9 @@ hr.rule { border: 0; border-top: 1px solid var(--rule-soft); margin: 2rem 0; }
 
 .toasts {
   position: fixed;
-  left: max(1rem, env(safe-area-inset-left));
+  /* Bottom right. The page's own content is left-aligned to a measure, so the
+     left corner sits under it while the right is clear at every width. */
+  right: max(1rem, env(safe-area-inset-right));
   bottom: max(1rem, env(safe-area-inset-bottom));
   z-index: 60;
   display: flex;
@@ -946,7 +948,7 @@ hr.rule { border: 0; border-top: 1px solid var(--rule-soft); margin: 2rem 0; }
 }
 
 @keyframes toast-out {
-  to { opacity: 0; transform: translateX(-1.5rem) scale(0.97); }
+  to { opacity: 0; transform: translateX(1.5rem) scale(0.97); }
 }
 
 .toast.is-leaving { animation: toast-out 170ms ease both; }
@@ -1024,4 +1026,123 @@ hr.rule { border: 0; border-top: 1px solid var(--rule-soft); margin: 2rem 0; }
     bottom: 0.6rem;
     width: auto;
   }
+}
+
+/* ==========================================================================
+   The announcer: what the walkthrough speaks through.
+
+   A banner at the top of the viewport, not a block in the page. The
+   walkthrough talks for about a minute and then stops; anything occupying real
+   layout for that minute pushes the content it is describing out from under the
+   reader, and leaves its final sentence stranded in the document afterwards.
+   ========================================================================== */
+
+.announcer {
+  position: fixed;
+  top: max(0.75rem, env(safe-area-inset-top));
+  left: 50%;
+  transform: translateX(-50%);
+  z-index: 70;
+  width: min(46rem, calc(100vw - 1.5rem));
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  gap: 0.5rem;
+  align-items: start;
+  padding: 0.85rem 0.8rem 0.9rem 1rem;
+  background: var(--sheet);
+  border: 1px solid var(--ink);
+  border-top: 3px solid var(--stamp);
+  border-radius: 2px;
+  box-shadow: 0 14px 34px -14px rgba(26, 28, 25, 0.5);
+  animation: announcer-in 240ms cubic-bezier(0.2, 0, 0, 1) both;
+}
+
+@keyframes announcer-in {
+  from { opacity: 0; transform: translate(-50%, -0.6rem); }
+  to   { opacity: 1; transform: translate(-50%, 0); }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .announcer { animation: none; }
+}
+
+/* A stopped walkthrough must not look like a finished one. */
+.announcer.is-halted { border-top-color: var(--refuse); background: var(--refuse-wash); }
+
+.announcer-step {
+  margin: 0 0 0.2rem;
+  font-size: var(--t-xs);
+  letter-spacing: 0.02em;
+  color: var(--ink-faint);
+}
+
+.announcer-line {
+  margin: 0;
+  font-family: var(--serif);
+  font-variation-settings: 'opsz' 36;
+  font-size: var(--t-md);
+  font-weight: 600;
+  line-height: 1.25;
+  text-wrap: balance;
+}
+
+.announcer-detail {
+  margin: 0.25rem 0 0;
+  font-size: var(--t-sm);
+  color: var(--ink-mid);
+  line-height: 1.45;
+}
+
+.announcer-output {
+  font-family: var(--mono);
+  font-size: var(--t-xs);
+  color: var(--ink-mid);
+  background: #fff;
+  border: 1px solid var(--rule-soft);
+  padding: 0.6rem 0.7rem;
+  margin: 0.7rem 0 0;
+  white-space: pre-wrap;
+  max-height: 9rem;
+  overflow: auto;
+}
+
+.announcer-close {
+  background: transparent;
+  border: 0;
+  color: var(--ink-faint);
+  font-size: 1.3rem;
+  line-height: 1;
+  padding: 0.1rem 0.3rem;
+  min-width: 1.75rem;
+  min-height: 1.75rem;
+  cursor: pointer;
+  border-radius: 3px;
+}
+
+.announcer-close:hover { color: var(--ink); background: var(--sheet-sunk); }
+.announcer-close:focus-visible { outline: 2.5px solid var(--stamp); outline-offset: 1px; }
+
+@media (max-width: 34rem) {
+  .announcer { padding: 0.7rem 0.6rem 0.75rem 0.8rem; }
+  .announcer-line { font-size: var(--t-base); }
+  .announcer-output { max-height: 7rem; }
+}
+
+/*
+ * A requirement that is standing between someone and an application.
+ *
+ * Marked only after they try to apply. Flagging every unmet requirement the
+ * moment the page loads tells a person they have failed before they have done
+ * anything, and by the time it matters they have stopped seeing it.
+ */
+.reference-row.is-required .reference-q::after {
+  content: '\002a';
+  color: var(--refuse);
+  font-weight: 700;
+  margin-left: 0.2em;
+}
+
+.reference-row.is-required {
+  background: var(--refuse-wash);
+  box-shadow: -0.75rem 0 0 var(--refuse-wash), 0.75rem 0 0 var(--refuse-wash);
 }
