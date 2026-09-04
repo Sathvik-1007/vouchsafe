@@ -8,7 +8,7 @@ browser's own tool registry, live, on both origins, and lets you watch a
 permission stop existing.
 
 Video: VIDEO_URL. The tool contract is in [TOOLS.md](TOOLS.md). MIT licensed,
-115 tests, and no runtime dependencies at all.
+117 tests, and no runtime dependencies at all.
 
 To rent a flat in Britain you upload your payslips, your bank statements and
 your passport to six letting agents, who keep them forever. None of them wanted
@@ -114,7 +114,7 @@ URL, and use *DevTools → Application → WebMCP* to call every tool by hand. T
 ```sh
 git clone https://github.com/Sathvik-1007/bureau-webmcp
 cd bureau-webmcp
-npm test          # 115 tests: 65 unit, 50 in a real browser
+npm test          # 117 tests: 65 unit, 52 in a real browser
 ./tools/serve.sh  # two origins, :4001 and :4002
 ```
 
@@ -303,7 +303,7 @@ stop every one.
 ## Tests
 
 ```sh
-npm test    # 115 tests, 0 failures
+npm test    # 117 tests, 0 failures
 ```
 
 **65 unit tests** cover threshold behaviour at the exact boundary, calendar-month
@@ -312,7 +312,7 @@ enforcement, tampered-record recovery, disclosure arithmetic, verdict parsing
 that is not fooled by a clause containing the opposite word, and the schema
 normalisation federation depends on.
 
-**50 end-to-end tests** drive a real Chromium with WebMCP, serve both origins,
+**52 end-to-end tests** drive a real Chromium with WebMCP, serve both origins,
 and click every control. They assert on three surfaces that can disagree, and a
 bug that matters here is exactly a disagreement between them: the DOM, the
 browser's own tool registry, and what the *other* origin can see across the

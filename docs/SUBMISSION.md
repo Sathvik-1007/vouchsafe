@@ -126,7 +126,7 @@ Both origins are static and deploy to Vercel. Neither makes a third-party
 request, including for the two typefaces, and a test fails the build if one is
 ever added.
 
-115 tests. 58 are unit tests; 50 drive a real Chromium with WebMCP enabled and
+117 tests. 58 are unit tests; 50 drive a real Chromium with WebMCP enabled and
 assert on three surfaces that can disagree, which is where the bugs in this
 project actually live: the DOM, the browser's own tool registry, and what the
 other origin can see across the boundary. `evals.json` is written in the format
