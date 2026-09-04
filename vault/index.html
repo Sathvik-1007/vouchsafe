@@ -1,0 +1,91 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Bureau — your vault</title>
+<meta name="description" content="A personal fact vault that answers questions about you without handing over the answers' underlying data. Built on WebMCP cross-origin tool federation.">
+<link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 16 16'><text y='13' font-size='13'>&#128274;</text></svg>">
+<link rel="stylesheet" href="./ui/base.css">
+</head>
+<body>
+<div class="wrap">
+
+  <header class="masthead">
+    <div>
+      <h1 class="brand">Bureau <span>/ vault</span></h1>
+      <p class="thesis">Your facts live here, in this browser, on your origin. A letting agent
+      never receives them. It asks a question and gets one bit back.</p>
+    </div>
+    <div style="text-align:right">
+      <div class="pill" id="mcp-status">checking…</div>
+      <div class="note" id="origin-label" style="margin-top:6px"></div>
+    </div>
+  </header>
+
+  <div id="banner-slot"></div>
+
+  <div class="cols">
+    <div>
+      <section class="panel">
+        <h2>Permissions <em id="grant-summary"></em></h2>
+        <div class="panel-body" style="padding-bottom:6px">
+          <label class="note" for="origin-picker" style="display:block;margin-bottom:6px">
+            Granting to
+          </label>
+          <select id="origin-picker"></select>
+          <div style="display:flex;gap:8px;margin-top:10px;flex-wrap:wrap">
+            <button id="grant-typical" class="grant">Grant the usual nine</button>
+            <button id="revoke-all" class="revoke">Revoke everything</button>
+          </div>
+        </div>
+        <div id="predicate-list"></div>
+      </section>
+
+      <section class="panel">
+        <h2>Your facts <em>never transmitted</em></h2>
+        <div class="panel-body">
+          <p class="note" style="margin-top:0">Synthetic sample data. Edit anything; the answers
+          above change with it. Nothing here leaves this origin, and this page ships no
+          <code>fetch</code> call at all.</p>
+          <div id="facts-form" style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-top:12px"></div>
+          <button id="reset-facts" style="margin-top:12px">Restore sample data</button>
+        </div>
+      </section>
+    </div>
+
+    <div>
+      <section class="panel">
+        <h2>Disclosure</h2>
+        <div class="panel-body">
+          <div class="big" id="bits-total">0.0</div>
+          <p class="note" style="margin:2px 0 10px">bits disclosed to the selected origin</p>
+          <div class="meter"><i id="bits-bar" style="width:0%"></i></div>
+          <p class="note" id="bits-explain"></p>
+        </div>
+      </section>
+
+      <section class="panel">
+        <h2>Live tool surface <em id="tool-count"></em></h2>
+        <div class="panel-body" style="padding-bottom:8px">
+          <p class="note" style="margin:0 0 8px">Registered on <code>document.modelContext</code>
+          right now. Revoking a permission aborts its registration, which fires
+          <code>toolchange</code> in the letting agent's page.</p>
+        </div>
+        <ul class="reset" id="live-tools" style="font-family:var(--mono);font-size:11.5px"></ul>
+      </section>
+
+      <section class="panel">
+        <h2>Ledger <em>your copy, held locally</em></h2>
+        <ul class="ledger reset" id="ledger"></ul>
+        <div class="panel-body" style="border-top:1px solid var(--line)">
+          <button id="clear-ledger">Clear ledger</button>
+        </div>
+      </section>
+    </div>
+  </div>
+</div>
+
+<script type="module" src="./ui/app.js"></script>
+</body>
+</html>
