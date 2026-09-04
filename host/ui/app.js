@@ -15,6 +15,7 @@ import { assess, summarise, resultsFor, clearResults } from '../lib/assessment.j
 import { registerHostTools, hostToolNames } from '../lib/agentsurface.js';
 import { escapeHtml as esc, gbp, errText } from '../lib/util.js';
 import { drawGraph, shortOrigin } from './graph.js';
+import { runDemo, demoRunning } from './demo.js';
 import { vaultOrigin, hostOrigin } from '../config.js';
 
 /** Listing the user is currently looking at. */
@@ -165,6 +166,34 @@ async function runChecks() {
   }
 }
 
+/**
+ * Render one beat of the guided demo, or clear the stage when it ends.
+ *
+ * @param {{caption: string, detail: string, output: string, index: number, total: number} | null} state
+ */
+function renderDemo(state) {
+  const stage = $('demo-stage');
+  const button = $('play-demo');
+
+  if (state === null) {
+    stage.hidden = true;
+    button.disabled = false;
+    button.textContent = 'Play the guided demo';
+    return;
+  }
+
+  stage.hidden = false;
+  button.disabled = true;
+  button.textContent = 'Running…';
+  $('demo-progress').textContent = state.index + ' of ' + state.total;
+  $('demo-caption').textContent = state.caption;
+  $('demo-detail').textContent = state.detail;
+
+  const out = $('demo-output');
+  out.hidden = state.output.length === 0;
+  out.textContent = state.output;
+}
+
 function wireEvents() {
   $('listings').addEventListener('click', (e) => {
     const button = e.target.closest('button[data-listing]');
@@ -182,6 +211,14 @@ function wireEvents() {
   });
 
   $('open-vault').addEventListener('click', () => window.open(vaultOrigin(), '_blank', 'noopener'));
+
+  $('play-demo').addEventListener('click', () => {
+    if (demoRunning()) return;
+    runDemo(renderDemo).catch((err) => {
+      renderDemo(null);
+      $('banner-slot').innerHTML = '<div class="banner bad">Demo failed: ' + esc(errText(err)) + '</div>';
+    });
+  });
 }
 
 /* -------------------------------------------------------------------------- */

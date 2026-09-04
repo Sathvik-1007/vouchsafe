@@ -58,6 +58,16 @@ site tools*. Then ask:
 - Now press **revoke** on `income_meets_multiple` in the vault panel, and ask it
   to check again. Watch the tool go missing.
 
+**No agent at all?** Press **Play the guided demo** on the live site. It runs the
+whole argument in about forty seconds, against both real origins, calling the
+same tools an agent would. Nothing is faked or replayed, so if federation were
+broken the demo would visibly fail.
+
+One detail worth noticing while it runs: the demo cannot grant itself anything.
+The vault ignores every request from the letting agent's page unless you tick
+the switch inside the vault panel first. A demonstration of a consent model is
+worth nothing if the consent model is suspended while it plays.
+
 **In Chrome 149+**: enable `chrome://flags/#enable-webmcp-testing`, open the live
 URL, and use *DevTools → Application → WebMCP* to call every tool by hand. The
 [Model Context Tool Inspector](https://developer.chrome.com/docs/ai/webmcp) works too.

@@ -24,6 +24,7 @@ import {
   isGranted,
 } from '../lib/grants.js';
 import { compareDisclosure } from '../lib/counterfactual.js';
+import { hostOrigin } from '../config.js';
 import { activeProbes, MAX_DISTINCT_PROBES } from '../lib/probe.js';
 import {
   sync,
@@ -458,6 +459,76 @@ function wireEvents() {
 }
 
 /* -------------------------------------------------------------------------- */
+/* demo mode                                                                  */
+/* -------------------------------------------------------------------------- */
+
+/**
+ * Is the embedding page allowed to drive grants?
+ *
+ * Off unless the person turns it on, and never persisted, so it dies with the
+ * tab. Without this the letting agent could `postMessage` itself a permission,
+ * which would make the entire consent model theatre. The demo is worth exactly
+ * nothing if the thing it demonstrates is not true while it runs.
+ */
+let demoArmed = false;
+
+/**
+ * Accept drive requests from the embedding origin, but only while armed.
+ *
+ * Three checks before anything happens: the message came from the origin we
+ * expect, it carries our marker, and the person has armed the switch. Any one
+ * failing drops the message silently, because an attacker learns something from
+ * an error and nothing from silence.
+ */
+function listenForDemoRequests() {
+  window.addEventListener('message', (event) => {
+    if (event.origin !== hostOrigin()) return;
+    if (event.data?.source !== 'bureau-demo') return;
+    if (!demoArmed) return;
+
+    const { action, predicate } = event.data;
+    if (action === 'grant-typical') {
+      applyChange(() => {
+        for (const name of TYPICAL_GRANTS) {
+          const r = grant(selected, name);
+          if (!r.ok) return r;
+        }
+        return { ok: true };
+      });
+    } else if (action === 'revoke-all') {
+      applyChange(() => revokeAll(selected));
+    } else if (action === 'revoke' && typeof predicate === 'string') {
+      applyChange(() => revoke(selected, predicate));
+    }
+  });
+}
+
+/** Draw the demo-mode switch, and only when the vault is actually embedded. */
+function renderDemoSwitch() {
+  const slot = $('demo-slot');
+  if (!slot) return;
+  // `window.top !== window` means we are in a frame. Standalone, this control
+  // has nothing to talk to and would only be a confusing extra switch.
+  if (window.top === window) {
+    slot.hidden = true;
+    return;
+  }
+  slot.hidden = false;
+  slot.innerHTML =
+    '<label style="display:flex;gap:8px;align-items:flex-start;cursor:pointer">' +
+    '<input type="checkbox" id="demo-toggle" style="width:auto;margin-top:3px"' +
+    (demoArmed ? ' checked' : '') + '>' +
+    '<span><strong style="font-size:12.5px">Let the guided demo drive these switches</strong>' +
+    '<span class="note" style="display:block">Off by default. Without it the letting agent ' +
+    'cannot change a single permission, which is the whole point.</span></span></label>';
+
+  $('demo-toggle').addEventListener('change', (e) => {
+    demoArmed = e.target.checked;
+    renderStatus();
+  });
+}
+
+/* -------------------------------------------------------------------------- */
 /* boot                                                                       */
 /* -------------------------------------------------------------------------- */
 
@@ -465,6 +536,8 @@ async function boot() {
   renderStatus();
   renderOriginPicker();
   renderFacts();
+  renderDemoSwitch();
+  listenForDemoRequests();
   wireEvents();
 
   // Registry changes can originate from an agent calling a management tool, not

@@ -25,6 +25,26 @@
 
   <div id="banner-slot"></div>
 
+  <div id="demo-stage" hidden>
+    <div class="panel" style="border-color:var(--link)">
+      <h2 style="color:var(--link)">Guided demo <em id="demo-progress"></em></h2>
+      <div class="panel-body">
+        <p id="demo-caption" style="font-size:17px;line-height:1.4;margin:0 0 6px"></p>
+        <p id="demo-detail" class="note" style="margin:0"></p>
+        <pre id="demo-output" style="font-family:var(--mono);font-size:11.5px;color:var(--ink-dim);
+             background:#0e1216;border:1px solid var(--line);border-radius:6px;padding:10px;
+             margin:12px 0 0;white-space:pre-wrap;max-height:190px;overflow:auto" hidden></pre>
+      </div>
+    </div>
+  </div>
+
+  <p style="margin:-6px 0 18px">
+    <button id="play-demo" class="primary">Play the guided demo</button>
+    <span class="note" id="demo-hint" style="margin-left:10px">
+      Runs the real thing against both origins. Arm the switch in the vault panel first.
+    </span>
+  </p>
+
   <section class="panel">
     <h2>Capability graph <em id="graph-caption">nothing borrowed</em></h2>
     <div class="panel-body" style="padding:0">
