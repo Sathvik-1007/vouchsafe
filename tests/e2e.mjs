@@ -73,7 +73,21 @@ function serve(dir, port) {
       res.writeHead(404).end('not found');
     }
   });
-  return new Promise((r) => server.listen(port, () => r(server)));
+  return new Promise((resolve, reject) => {
+    // Without this the suite hangs forever printing nothing. `listen` reports a
+    // bound port by emitting 'error', not by rejecting, so an unhandled one
+    // leaves the promise pending and the run looks like a blank terminal rather
+    // than a failure with a cause.
+    server.once('error', (err) => {
+      reject(new Error(
+        err.code === 'EADDRINUSE'
+          ? `port ${port} is already in use, probably by an earlier run that did not shut down. ` +
+            `Free it with: fuser -k ${port}/tcp`
+          : `could not serve ${dir} on ${port}: ${err.message}`
+      ));
+    });
+    server.listen(port, () => resolve(server));
+  });
 }
 
 /** Minimal CDP client with per-frame evaluation. */
@@ -113,7 +127,12 @@ class Browser {
   async attach() {
     const list = await (await fetch(`http://localhost:${DEBUG_PORT}/json`)).json();
     const page = list.find((t) => t.type === 'page');
-    if (!page) throw new Error('browser started but exposed no page');
+    if (!page) {
+      throw new Error(
+        `the browser started but never exposed a page on port ${DEBUG_PORT}. ` +
+        `If another run is still alive, free it with: fuser -k ${DEBUG_PORT}/tcp`
+      );
+    }
     this.#ws = new WebSocket(page.webSocketDebuggerUrl);
     this.#ws.onmessage = (e) => {
       const m = JSON.parse(e.data);
@@ -258,9 +277,14 @@ function notEq(actual, unexpected, what) {
 /* -------------------------------------------------------------------------- */
 
 async function main() {
+  // Announced before anything slow happens. A suite that prints nothing for its
+  // first thirty seconds is indistinguishable from one that has hung.
+  console.log('\nBureau end-to-end');
   const servers = [await serve('vault', VAULT_PORT), await serve('host', HOST_PORT)];
+  console.log(`  serving ${VAULT_ORIGIN} and ${HOST_ORIGIN}`);
+  console.log('  launching a browser with WebMCP enabled…');
   const browser = await Browser.launch();
-  console.log(`\nBureau end-to-end\n  vault ${VAULT_ORIGIN}\n  host  ${HOST_ORIGIN}\n`);
+  console.log('  ready\n');
 
   /** Tool names registered in a given origin's document. */
   const toolsIn = (origin) =>
